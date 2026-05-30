@@ -1,6 +1,6 @@
 # Network Hacking Protocols: Analysis and Exploitation
 
-> *Based on **Network Basics for Hackers** by OccupyTheWeb (Master OTW) - InfoSec Press, 2023*
+> *Based on **Network Basics for Hackers** by OccupyTheWeb (Master OTW)
 
 ---
 
