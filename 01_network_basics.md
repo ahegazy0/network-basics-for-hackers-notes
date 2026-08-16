@@ -1,6 +1,11 @@
-# Module 1 - Network Basics
+# Network Basics for Hackers
+## Module 01 - Network Basics
 
-> *The foundation. You can't break what you don't understand.*
+---
+
+## Overview
+
+The foundation of network security begins here. You can't break what you don't understand. Every communication on the internet relies on IP addressing, port mappings, and transport protocols like TCP and UDP. This module covers core networking mechanisms, the OSI model layers, OS fingerprinting heuristics, and how to map target attack surfaces using `nmap`.
 
 ---
 
@@ -97,6 +102,8 @@ UDP isn't broken. It's a deliberate trade-off. For streaming video, a dropped fr
 
 Before TCP moves any real data, both sides do a quick setup to establish the connection.
 
+![TCP Three-Way Handshake](assets/tcp_handshake_diagram_1789285428977.jpg)
+
 ```
 Client                    Server
   |                          |
@@ -163,25 +170,25 @@ The standard tool for mapping what's running on a target. Shows open ports, like
 
 ```bash
 # Basic scan - top 1000 ports
-nmap 192.168.1.1
+ahegazy0@kali:~$ nmap 192.168.1.1
 
 # Full TCP connect scan (completes the handshake - noisy but reliable)
-sudo nmap -sT 192.168.1.1
+ahegazy0@kali:~$ sudo nmap -sT 192.168.1.1
 
 # SYN scan (half-open, stealthier, needs root)
-sudo nmap -sS 192.168.1.1
+ahegazy0@kali:~$ sudo nmap -sS 192.168.1.1
 
 # Detect service versions
-nmap -sV 192.168.1.1
+ahegazy0@kali:~$ nmap -sV 192.168.1.1
 
 # OS detection
-sudo nmap -O 192.168.1.1
+ahegazy0@kali:~$ sudo nmap -O 192.168.1.1
 
 # Scan all 65535 ports
-nmap -p- 192.168.1.1
+ahegazy0@kali:~$ nmap -p- 192.168.1.1
 
 # Aggressive scan (OS + version + scripts + traceroute)
-sudo nmap -A 192.168.1.1
+ahegazy0@kali:~$ sudo nmap -A 192.168.1.1
 ```
 
 Open port = potential attack surface. The goal is to build a map of what's exposed.
@@ -204,29 +211,27 @@ Open port = potential attack surface. The goal is to build a map of what's expos
 
 ---
 
-## Lab
+## Practice
 
 ```bash
 # Check your own IP addresses
-ifconfig        # Linux/macOS
-ip a            # Modern Linux
-ipconfig        # Windows
+ahegazy0@kali:~$ ip a
 
 # Scan your own machine
-nmap localhost
-sudo nmap -sS localhost
+ahegazy0@kali:~$ nmap localhost
+ahegazy0@kali:~$ sudo nmap -sS localhost
 
 # See active connections right now
-ss -tulnp       # Linux
-netstat -ano    # Windows
+ahegazy0@kali:~$ ss -tulnp
 ```
 
-**Questions:**
+- [ ] Check your own IP addresses using `ip a` and identify your private vs public IP.
+- [ ] Run `nmap localhost` and `sudo nmap -sS localhost`. What ports are open, and what services handle them?
+- [ ] Inspect active listening sockets with `ss -tulnp`.
+- [ ] Reflect on transport trade-offs: Why does UDP not care if packets arrive? In what scenarios is that preferred?
 
-- What's your private IP? What's your public IP? (Check whatismyip.com - they're different)
-- Run `nmap localhost`. What ports are open? Do you know what's running on each one?
-- Why does UDP not care if packets arrive? Name one use case where that's actually fine.
+> 💡 *For deeper practice, I also recommend completing the end-of-chapter exercises in the official **Network Basics for Hackers** book.*
 
 ---
 
-*Next: how devices find each other on a local network - ARP, MAC addresses, and why that matters for interception.*
+*Up next: Module 02 - Subnetting & CIDR*
