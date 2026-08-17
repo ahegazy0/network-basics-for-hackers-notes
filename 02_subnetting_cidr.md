@@ -1,8 +1,11 @@
-# Module 2 - Subnetting & CIDR
-
-> *One big network is a mess. Subnetting is how you clean it up - and limit the damage when something goes wrong.*
+# Network Basics for Hackers
+## Module 02 - Subnetting & CIDR
 
 ---
+
+## Overview
+
+Subnetting divides large network blocks into structured segments. It solves two critical challenges: IP address allocation efficiency and network security isolation. By restricting broadcast domains, subnetting limits network noise and ensures that a compromise in one segment cannot effortlessly pivot across flat network boundaries without crossing routing firewalls.
 
 ## Why Subnetting Exists
 
@@ -38,6 +41,8 @@ The subnet mask tells you where the line is between those two parts.
 ## Subnet Masks
 
 A subnet mask is also 32 bits. The `1` bits mark the network portion, the `0` bits mark the host portion.
+
+![Subnet Mask and Bit Structure](assets/subnet_bits_diagram_1789285451815.jpg)
 
 ```
 IP address:    192.168.1.50   ->  11000000.10101000.00000001.00110010
@@ -172,28 +177,27 @@ You'll see CIDR constantly in firewall rules, cloud security groups, routing tab
 
 ---
 
-## Lab
+## Practice
 
 ```bash
 # Check your current network and subnet mask
-ip a                   # Linux - look for "inet x.x.x.x/xx"
-ifconfig               # older Linux / macOS
-ipconfig /all          # Windows
+ahegazy0@kali:~$ ip a
 
-# Check your routing table
-ip route
-route -n               # alternative
+# Check your kernel routing table
+ahegazy0@kali:~$ ip route
 
-# Scan a full subnet to see what's alive
-sudo nmap -sn 192.168.1.0/24
+# Ping-sweep scan a full /24 subnet to discover live hosts
+ahegazy0@kali:~$ sudo nmap -sn 192.168.1.0/24
 ```
 
-**Questions:**
+- [ ] Check your current interface subnet mask using `ip a`. What is your network CIDR notation?
+- [ ] Inspect your routing table using `ip route`. What is your default gateway route?
+- [ ] Calculate the network address, broadcast address, and host count for `10.0.0.5/22`.
+- [ ] Explain why a `/30` subnet yields only 2 usable addresses despite containing 4 total values.
+- [ ] Security architecture question: Finance and HR are currently on the same `/24`. What are the security risks compared to segmenting them onto separate `/26` subnets?
 
-- Your machine is `10.0.0.5/22`. What's the network address? How many hosts are in that subnet?
-- Why does `/30` only give 2 usable addresses if it has 4 total?
-- Finance and HR are on the same `/24`. What are the security risks vs putting them on separate `/26` subnets?
+> 💡 *For deeper practice, I also recommend completing the end-of-chapter exercises in the official **Network Basics for Hackers** book.*
 
 ---
 
-*Next: how devices find each other inside a subnet - ARP, MAC addresses, and why the local network is a great place to intercept traffic.*
+*Up next: Module 03 - Network Analysis (Wireshark & tcpdump)*
