@@ -1,16 +1,11 @@
-# Module 3 - Network Analysis
-
-> *Stop guessing what's on the wire. Start reading it.*
+# Network Basics for Hackers
+## Module 03 - Network Analysis
 
 ---
 
-## What's Actually Happening
+## Overview
 
-Every time your machine talks to another, it sends packets. Those packets travel through cables, switches, routers, wireless access points. At every point along the way, the data is physically present on a medium you can tap into.
-
-Network analysis is just that. Tap in, read what's there.
-
-This is how incident responders figure out what happened during a breach. It's also how attackers find credentials and session cookies on networks running cleartext protocols. Same skill, opposite use.
+Network analysis is the practice of capturing and decoding packets directly from the transmission medium. Whether verifying normal application traffic or hunting for cleartext credentials and signs of intrusion, packet analysis with tools like `tcpdump` and Wireshark provides ground truth of what actually travels across the wire.
 
 ---
 
@@ -20,12 +15,14 @@ By default, your network card only picks up packets addressed to your machine. E
 
 Promiscuous mode turns that filter off. Your card captures everything passing by - broadcasts, traffic meant for other machines, all of it.
 
+![Packet Sniffing and Capture Pipeline](assets/packet_sniffing_pipeline_1789285467151.jpg)
+
 ```bash
 # Enable promiscuous mode manually
-sudo ip link set eth0 promisc on
+ahegazy0@kali:~$ sudo ip link set eth0 promisc on
 
 # Verify (look for "PROMISC" in the flags)
-ip link show eth0
+ahegazy0@kali:~$ ip link show eth0
 ```
 
 Most sniffers like Wireshark and tcpdump enable this automatically when they start. But it's worth knowing what it means - without it you're only seeing your own traffic, which isn't very useful.
@@ -40,28 +37,28 @@ Command-line packet sniffer. No GUI, no setup. Runs on servers, embedded systems
 
 ```bash
 # Basic capture on an interface
-sudo tcpdump -i eth0
+ahegazy0@kali:~$ sudo tcpdump -i eth0
 
 # Save to a file, open in Wireshark later
-sudo tcpdump -i eth0 -w capture.pcap
+ahegazy0@kali:~$ sudo tcpdump -i eth0 -w capture.pcap
 
 # Read a saved capture
-tcpdump -r capture.pcap
+ahegazy0@kali:~$ tcpdump -r capture.pcap
 
 # Only show HTTP traffic
-sudo tcpdump -i eth0 port 80
+ahegazy0@kali:~$ sudo tcpdump -i eth0 port 80
 
 # Filter by host
-sudo tcpdump -i eth0 host 192.168.1.50
+ahegazy0@kali:~$ sudo tcpdump -i eth0 host 192.168.1.50
 
 # Show packet contents in ASCII (great for spotting cleartext)
-sudo tcpdump -i eth0 -A port 80
+ahegazy0@kali:~$ sudo tcpdump -i eth0 -A port 80
 
 # Combine filters
-sudo tcpdump -i eth0 host 192.168.1.1 and port 443
+ahegazy0@kali:~$ sudo tcpdump -i eth0 host 192.168.1.1 and port 443
 
 # Hunt for login keywords in cleartext traffic
-sudo tcpdump -i eth0 -A | grep -i "pass\|login\|user\|username"
+ahegazy0@kali:~$ sudo tcpdump -i eth0 -A | grep -i "pass\|login\|user\|username"
 ```
 
 The raw output looks confusing at first:
@@ -151,23 +148,23 @@ Same thing with cookies. If a session cookie gets sent over HTTP, you can copy i
 
 ```bash
 # All connections and listening ports
-netstat -a
+ahegazy0@kali:~$ netstat -a
 
 # Show process names with ports (needs root)
-sudo netstat -tulnp
+ahegazy0@kali:~$ sudo netstat -tulnp
 
 # Only established connections
-netstat -an | grep ESTABLISHED
+ahegazy0@kali:~$ netstat -an | grep ESTABLISHED
 
 # Only listening ports
-netstat -an | grep LISTEN
+ahegazy0@kali:~$ netstat -an | grep LISTEN
 
 # Check for web connections
-netstat -a | grep :80
-netstat -a | grep :443
+ahegazy0@kali:~$ netstat -a | grep :80
+ahegazy0@kali:~$ netstat -a | grep :443
 
 # On modern Linux, ss is faster
-ss -tulnp
+ahegazy0@kali:~$ ss -tulnp
 ```
 
 On a machine you know well, netstat is routine. On a machine you're investigating, it can reveal backdoors - unexpected listening ports, outbound connections to strange IPs, processes that have no business on the network.
@@ -178,23 +175,19 @@ On a machine you know well, netstat is routine. On a machine you're investigatin
 
 ```bash
 # Your IP addresses and MAC address
-ip a
-ifconfig       # older systems
+ahegazy0@kali:~$ ip a
 
 # Test if a host is up
-ping 8.8.8.8
-ping -c 4 192.168.1.1     # send exactly 4 pings
+ahegazy0@kali:~$ ping -c 4 8.8.8.8
 
 # Trace the route packets take
-traceroute google.com     # Linux/macOS
-tracert google.com        # Windows
+ahegazy0@kali:~$ traceroute google.com
 
 # Show ARP cache (IP to MAC mappings your machine knows)
-arp -a
+ahegazy0@kali:~$ arp -a
 
 # DNS lookups
-nslookup google.com
-dig google.com
+ahegazy0@kali:~$ dig google.com
 ```
 
 `traceroute` is underrated. It shows every router hop between you and a destination with response times. Useful for understanding network topology and spotting traffic being routed somewhere unexpected.
@@ -240,32 +233,28 @@ dig google.com
 
 ---
 
-## Lab
+## Practice
 
 ```bash
-# 1. Capture some traffic, browse a site, then stop
-sudo tcpdump -i eth0 -w ~/test.pcap
-# browse something, ctrl+c to stop
-wireshark ~/test.pcap
+# 1. Capture traffic to a pcap file
+ahegazy0@kali:~$ sudo tcpdump -i eth0 -w ~/test.pcap
 
-# 2. In Wireshark, type "http" in the filter bar
-#    Find any GET request and click it
-#    Expand "Hypertext Transfer Protocol" in the middle pane
+# 2. Inspect captured pcap with Wireshark
+ahegazy0@kali:~$ wireshark ~/test.pcap
 
-# 3. Check what your machine is connected to right now
-ss -tulnp
-netstat -an | grep ESTABLISHED
-
-# 4. Right-click any TCP packet in Wireshark > Follow > TCP Stream
-#    Read what you see
+# 3. Check active listening sockets and established connections
+ahegazy0@kali:~$ ss -tulnp
+ahegazy0@kali:~$ ss -t state established
 ```
 
-**Questions:**
+- [ ] Capture traffic on your primary interface using `tcpdump -i eth0 -w capture.pcap` while generating HTTP requests.
+- [ ] Open the capture in Wireshark, apply the `http` display filter, and inspect request headers in the middle pane.
+- [ ] Use **Follow > TCP Stream** on an unencrypted session to reconstruct the client-server conversation.
+- [ ] Inspect active sockets on your host with `ss -tulnp` and identify processes tied to listening ports.
+- [ ] Explain why promiscuous mode on a switched Ethernet segment behaves differently than on open wireless networks.
 
-- Why does promiscuous mode matter more on a wireless network than a wired switched one?
-- Capture traffic while loading any HTTP site. Can you find the GET request? What headers show up?
-- What's the difference between what `netstat` shows you vs what `tcpdump` captures?
+> 💡 *For deeper practice, I also recommend completing the end-of-chapter exercises in the official **Network Basics for Hackers** book.*
 
 ---
 
-*Next: ARP - the protocol that maps IPs to MAC addresses, and why it's one of the easiest things to abuse on a local network.*
+*Up next: Module 04 - Linux Firewalls (iptables)*
