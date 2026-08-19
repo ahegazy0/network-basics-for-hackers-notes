@@ -1,22 +1,19 @@
-# Module 4 - Building the Wall (Linux Firewalls)
-
-> *Every packet that touches your machine goes through this. Worth understanding properly.*
+# Network Basics for Hackers
+## Module 04 - Linux Firewalls (iptables)
 
 ---
 
-## What a Firewall Does
+## Overview
 
-A firewall sits between your machine and the network and decides what traffic gets through. Every packet trying to enter or leave gets checked against a list of rules. Match a rule, get handled. No match, the default policy decides.
-
-On Linux that's `iptables`. It's been in the kernel for a long time. Newer tools like `ufw` and `firewalld` exist, but they're just wrappers around `iptables`. Understanding the real thing means you'll never be confused by what those tools are doing underneath.
-
-The bouncer analogy is accurate. There's a list. Every packet that shows up gets checked top to bottom. First matching rule wins. You either get in (ACCEPT) or get turned away (DROP). Not on the list at all? Default policy decides.
+A firewall monitors and filters incoming and outgoing network traffic based on configured security rules. On Linux, `iptables` directly manages the Netfilter packet filtering subsystem within the kernel. Understanding rule traversal, chains, states, and default policies allows you to secure endpoints and anticipate defensive filtering during reconnaissance.
 
 ---
 
 ## Tables and Chains
 
 iptables organizes rules into **tables**. For basic firewall work, the only one you really need is the `filter` table. That's the default and it handles all allow/deny decisions.
+
+![iptables Packet Traversal](assets/iptables_traversal_diagram_1789285476780.jpg)
 
 Inside the filter table there are three **chains**:
 
@@ -33,7 +30,7 @@ Each chain is its own list of rules. Three separate bouncers - one at the entran
 ## Basic Syntax
 
 ```bash
-sudo iptables -A INPUT -s <source_IP> -j DROP
+ahegazy0@kali:~$ sudo iptables -A INPUT -s <source_IP> -j DROP
 ```
 
 Breaking it down:
@@ -62,10 +59,10 @@ Classic mistake:
 
 ```bash
 # Drop everything
-sudo iptables -A INPUT -j DROP
+ahegazy0@kali:~$ sudo iptables -A INPUT -j DROP
 
 # Allow SSH - this will NEVER fire
-sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+ahegazy0@kali:~$ sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT
 ```
 
 That SSH rule is dead. Every packet hits DROP first and gets discarded before iptables even checks the second rule. You've locked yourself out.
@@ -74,13 +71,13 @@ Correct order - specific rules first, broad rules last:
 
 ```bash
 # Allow SSH first
-sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+ahegazy0@kali:~$ sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT
 
 # Allow replies to connections you started
-sudo iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ahegazy0@kali:~$ sudo iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # Now drop everything else
-sudo iptables -A INPUT -j DROP
+ahegazy0@kali:~$ sudo iptables -A INPUT -j DROP
 ```
 
 That `ESTABLISHED,RELATED` rule is easy to forget and it breaks everything when you do. Without it, outbound connections work but replies get blocked coming back in. Websites stop loading, updates fail, everything that talks to the internet breaks.
@@ -93,10 +90,10 @@ Every chain has a **default policy** - what happens when a packet reaches the en
 
 ```bash
 # Drop anything not explicitly allowed
-sudo iptables -P INPUT DROP
+ahegazy0@kali:~$ sudo iptables -P INPUT DROP
 
 # Allow anything not explicitly blocked
-sudo iptables -P INPUT ACCEPT
+ahegazy0@kali:~$ sudo iptables -P INPUT ACCEPT
 ```
 
 DROP as default = allowlist. You decide what's allowed, everything else is silently discarded. Secure, but more work to set up.
@@ -111,29 +108,29 @@ For any machine you care about, default DROP on INPUT is the right call. You're 
 
 ```bash
 # See all current rules
-sudo iptables -L
-sudo iptables -L -v               # verbose, shows packet/byte counters
-sudo iptables -L --line-numbers   # shows rule numbers, needed for deleting
+ahegazy0@kali:~$ sudo iptables -L
+ahegazy0@kali:~$ sudo iptables -L -v               # verbose, shows packet/byte counters
+ahegazy0@kali:~$ sudo iptables -L --line-numbers   # shows rule numbers, needed for deleting
 
 # Block incoming traffic from a specific IP
-sudo iptables -A INPUT -s 10.10.10.10 -j DROP
+ahegazy0@kali:~$ sudo iptables -A INPUT -s 10.10.10.10 -j DROP
 
 # Allow a specific port inbound
-sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT
-sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+ahegazy0@kali:~$ sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+ahegazy0@kali:~$ sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT
 
 # Block outbound traffic to a specific IP
-sudo iptables -A OUTPUT -d 93.184.216.34 -j DROP
+ahegazy0@kali:~$ sudo iptables -A OUTPUT -d 93.184.216.34 -j DROP
 
 # Delete a rule by line number
-sudo iptables -D INPUT 3
+ahegazy0@kali:~$ sudo iptables -D INPUT 3
 
 # Flush all rules - wipes everything, fresh start
-sudo iptables -F
+ahegazy0@kali:~$ sudo iptables -F
 
 # Set default policy
-sudo iptables -P INPUT DROP
-sudo iptables -P OUTPUT ACCEPT
+ahegazy0@kali:~$ sudo iptables -P INPUT DROP
+ahegazy0@kali:~$ sudo iptables -P OUTPUT ACCEPT
 ```
 
 The `-F` flush is your panic button. Misconfigured rules and locked yourself out of a remote machine? `-F` wipes everything and restores default behavior. Know this command before you start experimenting on anything important.
@@ -146,20 +143,20 @@ This is what a minimal secure server looks like as a starting point:
 
 ```bash
 # Allow loopback (machine talking to itself - never block this)
-sudo iptables -A INPUT -i lo -j ACCEPT
+ahegazy0@kali:~$ sudo iptables -A INPUT -i lo -j ACCEPT
 
 # Allow established connections (replies to your outbound traffic)
-sudo iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ahegazy0@kali:~$ sudo iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # Allow SSH
-sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+ahegazy0@kali:~$ sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT
 
-# Allow web traffic if it's a web server
-sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT
-sudo iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+# Allow web traffic if running an HTTP/HTTPS service
+ahegazy0@kali:~$ sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+ahegazy0@kali:~$ sudo iptables -A INPUT -p tcp --dport 443 -j ACCEPT
 
 # Drop everything else
-sudo iptables -A INPUT -j DROP
+ahegazy0@kali:~$ sudo iptables -A INPUT -j DROP
 ```
 
 Each rule has a reason. Loopback lets the OS talk to itself - blocking it breaks things in weird ways. ESTABLISHED lets replies in. The rest is just whitelisting what you actually need open.
@@ -183,32 +180,34 @@ Each rule has a reason. Loopback lets the OS talk to itself - blocking it breaks
 
 ---
 
-## Lab
+## Practice
 
 ```bash
-# 1. Check your current rules
-sudo iptables -L --line-numbers
+# 1. Inspect existing rules with line numbers
+ahegazy0@kali:~$ sudo iptables -L --line-numbers
 
-# 2. Block your own machine from a specific port
-sudo iptables -A INPUT -s 127.0.0.1 -p tcp --dport 80 -j DROP
+# 2. Add a test drop rule for local traffic to port 80
+ahegazy0@kali:~$ sudo iptables -A INPUT -s 127.0.0.1 -p tcp --dport 80 -j DROP
 
-# 3. List rules and confirm yours appeared
-sudo iptables -L --line-numbers
+# 3. List rules and confirm your new rule is active
+ahegazy0@kali:~$ sudo iptables -L --line-numbers
 
-# 4. Delete the rule you added
-sudo iptables -D INPUT 1    # use the actual line number from step 3
+# 4. Delete the test rule using its line number
+ahegazy0@kali:~$ sudo iptables -D INPUT 1
 
-# 5. Flush everything and verify
-sudo iptables -F
-sudo iptables -L
+# 5. Flush all rules to restore default state
+ahegazy0@kali:~$ sudo iptables -F
+ahegazy0@kali:~$ sudo iptables -L
 ```
 
-**Things to think about:**
+- [ ] Inspect existing iptables rules using `sudo iptables -L --line-numbers`.
+- [ ] Add a rule to block incoming traffic from a test IP and verify it appears in `iptables -L`.
+- [ ] Delete the test rule using its specific chain and line number (`iptables -D INPUT <num>`).
+- [ ] Understand rule order risks: Why must `ESTABLISHED,RELATED` precede a catch-all `DROP` rule?
+- [ ] Compare scanner perspectives: What difference does an nmap scan see between a port that sends `REJECT` vs one silently dropped with `DROP`?
 
-- If you set `-P INPUT DROP` as default policy then run `iptables -F` to flush rules - what happens to your SSH session? Why?
-- From an attacker's port scan, what's the difference between a port that REJECTs vs one that silently DROPs?
-- Why does `ESTABLISHED,RELATED` need to come before the final DROP rule?
+> 💡 *For deeper practice, I also recommend completing the end-of-chapter exercises in the official **Network Basics for Hackers** book.*
 
 ---
 
-*Next: how traffic gets routed between networks, and where that process gets abused to redirect or intercept packets.*
+*Up next: Module 05 - Wi-Fi Hacking*
