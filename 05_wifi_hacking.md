@@ -1,29 +1,22 @@
-# Module 5 - The Invisible Airwaves (Wi-Fi Hacking)
-
-> *Wireless signals don't stop at your walls. Everything sent through the air is fair game for anyone close enough to listen.*
+# Network Basics for Hackers
+## Module 05 - Wi-Fi Hacking
 
 ---
 
-## Why Wi-Fi Is Different
+## Overview
 
-Wired networks are physically contained. To intercept traffic you need to be plugged into the same network. Wireless doesn't work that way. The signal radiates in every direction, through walls, through floors, out into the street. Anyone within range with the right hardware can see it.
-
-A coffee shop, an office building, an apartment complex - anyone nearby is technically within range of your wireless traffic. Whether they can do anything useful with it depends on the encryption.
-
-WPA2 is the current standard. It's not trivially broken, but it has well-documented weaknesses.
+Wireless networks broadcast signals across physical boundaries, making 802.11 traffic accessible to anyone within radio frequency range. Attacking Wi-Fi networks involves capturing authentication material over the air - such as the 4-way WPA/WPA2 handshake or vulnerable WPS exchanges - and performing offline cryptographic analysis without sending further traffic to the target.
 
 ---
 
 ## The Hardware Problem
 
-Your built-in laptop Wi-Fi card almost certainly can't do this.
+Standard wireless network cards in consumer laptops are built to connect to existing networks in managed mode, not to inject raw 802.11 frames or capture ambient packets. For penetration testing, you need an adapter that supports:
 
-Standard adapters are built to connect to networks, not capture raw 802.11 frames or inject custom packets. For wireless testing you need an adapter that supports:
+- **Monitor mode** - receive all wireless frames in range, not just the ones addressed to your machine
+- **Packet injection** - transmit raw 802.11 management frames (required for deauthentication attacks)
 
-- **Monitor mode** - receive all wireless frames in range, not just the ones addressed to you
-- **Packet injection** - send raw 802.11 frames (needed for deauth attacks)
-
-The go-to is the **Alfa AWUS036ACH** or similar Alfa adapters. Cheap, Linux-compatible, and supports both features. If attacks aren't working, the adapter is usually the reason.
+> 💡 **Integrated Wi-Fi Card Lab Tip:** While external USB adapters (like Alfa chipsets) are widely recommended, you can often test with your laptop's integrated Wi-Fi card by booting **Kali Linux directly from a Live USB**. Running Kali natively on bare metal gives the kernel direct access to internal wireless chipsets, avoiding hypervisor virtualization boundaries and frequently allowing monitor mode and packet injection without purchasing additional dongles.
 
 ---
 
@@ -33,19 +26,19 @@ Normal Wi-Fi cards work in **managed mode** - they connect to one access point a
 
 ```bash
 # Check your wireless interfaces
-iwconfig
+ahegazy0@kali:~$ iwconfig
 
-# Enable monitor mode
-sudo airmon-ng start wlan0
+# Kill processes that might interfere (NetworkManager, wpa_supplicant)
+ahegazy0@kali:~$ sudo airmon-ng check kill
 
-# Creates a new interface, usually wlan0mon
-iwconfig   # confirm it shows "Mode: Monitor"
+# Enable monitor mode on wireless interface
+ahegazy0@kali:~$ sudo airmon-ng start wlan0
 
-# Kill processes that might interfere (NetworkManager, etc.)
-sudo airmon-ng check kill
+# Verify monitor mode is active (look for Mode:Monitor)
+ahegazy0@kali:~$ iwconfig
 
 # Stop monitor mode when done
-sudo airmon-ng stop wlan0mon
+ahegazy0@kali:~$ sudo airmon-ng stop wlan0mon
 ```
 
 In monitor mode your card isn't connected to anything. It's just listening. Like tuning a radio to a frequency and recording everything on it.
@@ -58,10 +51,10 @@ In monitor mode your card isn't connected to anything. It's just listening. Like
 
 ```bash
 # Scan all channels
-sudo airodump-ng wlan0mon
+ahegazy0@kali:~$ sudo airodump-ng wlan0mon
 
 # Lock onto a specific channel and BSSID, save to file
-sudo airodump-ng -c 6 --bssid AA:BB:CC:DD:EE:FF -w capture wlan0mon
+ahegazy0@kali:~$ sudo airodump-ng -c 6 --bssid AA:BB:CC:DD:EE:FF -w capture wlan0mon
 ```
 
 Output looks like this:
@@ -87,6 +80,8 @@ You need the BSSID and channel before targeting a specific network. This is the 
 ## Capturing the WPA2 Handshake
 
 WPA2 uses a **4-way handshake** when a client connects. The two sides exchange four packets to establish session keys. That handshake has enough information to verify password guesses offline - which is why capturing it is the goal.
+
+![Wi-Fi Deauthentication and 4-Way Handshake Capture](assets/wifi_handshake_deauth_diagram_1789285491528.jpg)
 
 ```
 Client                    Access Point
@@ -117,10 +112,10 @@ The 802.11 standard includes a deauthentication frame that tells a client it's b
 ```bash
 # Deauth a specific client
 # -0 = deauth attack, 10 = number of packets, -a = AP BSSID, -c = client MAC
-sudo aireplay-ng -0 10 -a AA:BB:CC:DD:EE:FF -c 11:22:33:44:55:66 wlan0mon
+ahegazy0@kali:~$ sudo aireplay-ng -0 10 -a AA:BB:CC:DD:EE:FF -c 11:22:33:44:55:66 wlan0mon
 
 # Broadcast deauth (kicks everyone off the network)
-sudo aireplay-ng -0 10 -a AA:BB:CC:DD:EE:FF wlan0mon
+ahegazy0@kali:~$ sudo aireplay-ng -0 10 -a AA:BB:CC:DD:EE:FF wlan0mon
 ```
 
 While this runs, `airodump-ng` should be capturing in the background. When a client reconnects, you'll see `WPA handshake: AA:BB:CC:DD:EE:FF` in the top right of the airodump output. That's your capture.
@@ -133,7 +128,7 @@ Once you have the `.cap` file with the handshake, cracking is entirely offline. 
 
 ```bash
 # Crack using a wordlist
-sudo aircrack-ng -w /usr/share/wordlists/rockyou.txt -b AA:BB:CC:DD:EE:FF capture.cap
+ahegazy0@kali:~$ sudo aircrack-ng -w /usr/share/wordlists/rockyou.txt -b AA:BB:CC:DD:EE:FF capture.cap
 
 # rockyou.txt has 14 million real passwords from an old data breach
 # if the password is common, it's in here
@@ -153,10 +148,10 @@ An 8-digit PIN should have 100 million combinations. But the protocol validates 
 
 ```bash
 # Find networks with WPS enabled
-sudo wash -i wlan0mon
+ahegazy0@kali:~$ sudo wash -i wlan0mon
 
 # Brute-force the WPS PIN
-sudo reaver -i wlan0mon -b AA:BB:CC:DD:EE:FF -vv
+ahegazy0@kali:~$ sudo reaver -i wlan0mon -b AA:BB:CC:DD:EE:FF -vv
 ```
 
 Many routers have WPS on by default. Some older ones can't properly disable it. If WPS is enabled, the strength of the WPA2 password barely matters.
@@ -187,33 +182,34 @@ Many routers have WPS on by default. Some older ones can't properly disable it. 
 
 ---
 
-## Lab
+## Practice
 
 ```bash
 # 1. Check wireless interfaces
-iwconfig
+ahegazy0@kali:~$ iwconfig
 
 # 2. Enable monitor mode
-sudo airmon-ng check kill
-sudo airmon-ng start wlan0
+ahegazy0@kali:~$ sudo airmon-ng check kill
+ahegazy0@kali:~$ sudo airmon-ng start wlan0
 
 # 3. Scan for nearby networks
-sudo airodump-ng wlan0mon
-# Note the BSSID and channel of your own test router
+ahegazy0@kali:~$ sudo airodump-ng wlan0mon
 
-# 4. Lock onto your target and save the capture
-sudo airodump-ng -c <channel> --bssid <BSSID> -w test_capture wlan0mon
+# 4. Lock onto your test target and save the capture
+ahegazy0@kali:~$ sudo airodump-ng -c 6 --bssid AA:BB:CC:DD:EE:FF -w test_capture wlan0mon
 
 # 5. Check if WPS is enabled on nearby routers
-sudo wash -i wlan0mon
+ahegazy0@kali:~$ sudo wash -i wlan0mon
 ```
 
-**Things to think about:**
+- [ ] Check wireless interfaces with `iwconfig` and verify whether monitor mode is supported on your chipset.
+- [ ] Put your wireless card into monitor mode using `sudo airmon-ng start wlan0` (or test via Kali Live USB).
+- [ ] Run `sudo airodump-ng wlan0mon` to identify nearby BSSIDs, operational channels, and active clients.
+- [ ] Capture the 4-way handshake on your test lab network using `aireplay-ng` deauth frames and confirm capture in airodump-ng.
+- [ ] Explain why WPA2 offline dictionary attacks require both the captured handshake and the target network's SSID (salt).
 
-- Why can't you crack a WPA2 handshake without knowing the SSID?
-- A router has a 25-character random WPA2 password but WPS is enabled. Is it actually secure?
-- What does WPA3's SAE handshake do differently that stops offline cracking?
+> 💡 *For deeper practice, I also recommend completing the end-of-chapter exercises in the official **Network Basics for Hackers** book.*
 
 ---
 
-*Next: Bluetooth - shorter range than Wi-Fi but just as exploitable, and running on a lot more devices than most people realize.*
+*Up next: Module 06 - Bluetooth Networks*
