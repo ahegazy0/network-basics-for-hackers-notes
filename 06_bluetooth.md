@@ -1,6 +1,11 @@
-# Module 6 - Short-Range Secrets (Bluetooth Security)
+# Network Basics for Hackers
+## Module 06 - Bluetooth Security
 
-> *Low power, short range, and completely forgotten by most people when it comes to security.*
+---
+
+## Overview
+
+Bluetooth is a ubiquitous short-range wireless protocol operating in the 2.4 GHz ISM band. Despite its limited physical radius, Bluetooth presents a significant attack surface across mobile phones, laptops, automobiles, and IoT sensors. This module explores Bluetooth pairing mechanisms, service discovery via SDP, legacy protocol exploits like bluesnarfing and bluebugging, and modern stack vulnerabilities such as BlueBourne.
 
 ---
 
@@ -50,32 +55,32 @@ Most people assume non-discoverable means invisible. It doesn't. If you already 
 
 ```bash
 # Check your Bluetooth interface (like ifconfig but for Bluetooth)
-hciconfig
+ahegazy0@kali:~$ hciconfig
 
 # Bring the interface up
-sudo hciconfig hci0 up
+ahegazy0@kali:~$ sudo hciconfig hci0 up
 
 # Scan for discoverable devices in range
-hcitool scan
+ahegazy0@kali:~$ hcitool scan
 
 # Get more info about a specific device
-hcitool info <MAC_ADDRESS>
+ahegazy0@kali:~$ hcitool info <MAC_ADDRESS>
 
 # Scan for low energy (BLE) devices
-sudo hcitool lescan
+ahegazy0@kali:~$ sudo hcitool lescan
 
 # Check what services a device is running (Service Discovery Protocol)
-sdptool browse <MAC_ADDRESS>
+ahegazy0@kali:~$ sdptool browse <MAC_ADDRESS>
 ```
 
 `hcitool scan` only finds devices in discoverable mode. That's a limited view. Most real-world Bluetooth recon involves additional tools that go beyond basic discovery.
 
 ```bash
 # btscanner - GUI tool for finding and fingerprinting BT devices
-sudo btscanner
+ahegazy0@kali:~$ sudo btscanner
 
 # bluelog - passive Bluetooth scanner, logs everything it finds
-sudo bluelog -i hci0 -o scan_results.txt
+ahegazy0@kali:~$ sudo bluelog -i hci0 -o scan_results.txt
 ```
 
 ---
@@ -106,7 +111,7 @@ The attack works through vulnerabilities in the Bluetooth stack at the OS level 
 # BlueBourne scanning and exploitation framework
 # https://github.com/ArmisSecurity/blueborne
 
-python blueborne.py -i hci0 scan
+ahegazy0@kali:~$ python blueborne.py -i hci0 scan
 ```
 
 BlueBourne is patched on updated devices, but an enormous number of embedded systems, older phones, and IoT devices never received the patches.
@@ -136,10 +141,10 @@ SDP runs on every Bluetooth device and tells other devices what services are ava
 
 ```bash
 # Browse all services on a target device
-sdptool browse --tree <MAC_ADDRESS>
+ahegazy0@kali:~$ sdptool browse --tree <MAC_ADDRESS>
 
 # Search for a specific service
-sdptool search --bdaddr <MAC_ADDRESS> <SERVICE_NAME>
+ahegazy0@kali:~$ sdptool search --bdaddr <MAC_ADDRESS> <SERVICE_NAME>
 ```
 
 The service list tells you a lot. A device exposing a OBEX Object Push service is potentially vulnerable to bluesnarfing. A device with a Serial Port Profile might accept AT commands. Each exposed service is a potential attack surface.
@@ -170,33 +175,33 @@ The service list tells you a lot. A device exposing a OBEX Object Push service i
 
 ---
 
-## Lab
+## Practice
 
 ```bash
 # 1. Check your Bluetooth interface
-hciconfig
+ahegazy0@kali:~$ hciconfig
 
-# 2. Bring it up if it's down
-sudo hciconfig hci0 up
+# 2. Bring interface up if down
+ahegazy0@kali:~$ sudo hciconfig hci0 up
 
 # 3. Scan for discoverable devices
-hcitool scan
-# Turn your phone's Bluetooth visibility on and see if it shows up
+ahegazy0@kali:~$ hcitool scan
 
-# 4. If you find a device, look at its services
-sdptool browse <MAC_ADDRESS>
+# 4. If a test device is discovered, inspect exposed SDP profiles
+ahegazy0@kali:~$ sdptool browse <MAC_ADDRESS>
 
-# 5. Try BLE scanning
-sudo hcitool lescan
-# Watch what devices appear - you'll likely see fitness bands, earbuds, etc.
+# 5. Scan for low energy (BLE) advertisements
+ahegazy0@kali:~$ sudo hcitool lescan
 ```
 
-**Things to think about:**
+- [ ] Check local Bluetooth hardware using `hciconfig` and ensure the interface is UP.
+- [ ] Perform a discoverable device inquiry with `hcitool scan` against a controlled mobile device.
+- [ ] Query SDP service records with `sdptool browse <MAC>` to enumerate supported Bluetooth profiles.
+- [ ] Run `sudo hcitool lescan` to observe nearby BLE advertising beacons.
+- [ ] Explain why setting a Bluetooth device to non-discoverable mode does not protect it against stack vulnerabilities like BlueBourne if its MAC address is known.
 
-- Why is non-discoverable mode not the same as being invisible on Bluetooth?
-- BlueBourne required no user interaction and no discoverable mode. What does that tell you about assuming short range means safe?
-- What's the difference between bluesnarfing and bluebugging in terms of what an attacker can do?
+> 💡 *For deeper practice, I also recommend completing the end-of-chapter exercises in the official **Network Basics for Hackers** book.*
 
 ---
 
-*Next: DNS - how names become IP addresses, and why that process is one of the most abused in networking.*
+*Up next: Module 07 - ARP (Address Resolution Protocol)*
