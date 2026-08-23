@@ -1,6 +1,11 @@
-# Module 8 - The Internet's Phonebook (DNS)
+# Network Basics for Hackers
+## Module 08 - DNS (Domain Name System)
 
-> *Every website you visit starts with a DNS query. Most people never think about it. Attackers think about it constantly.*
+---
+
+## Overview
+
+The Domain Name System (DNS) operates as the distributed hierarchical directory of the internet, resolving human-friendly domain names to machine-routable IP addresses. Because legacy DNS queries travel unencrypted over UDP port 53 without inherent origin authentication, DNS is vulnerable to reconnaissance, zone transfer leakage, cache poisoning, and DNS tunneling.
 
 ---
 
@@ -15,6 +20,8 @@ Without DNS, you'd have to memorize `142.250.80.46` instead of `google.com`. DNS
 ## How DNS Resolution Works
 
 DNS is hierarchical. There isn't one giant phonebook somewhere - it's a distributed system of servers that delegate responsibility for different parts of the namespace.
+
+![Recursive DNS Resolution Flow](assets/dns_resolution_flow_diagram_1789285520510.jpg)
 
 When you type a domain name, here's what actually happens:
 
@@ -68,33 +75,33 @@ From a recon perspective, MX and NS records are particularly useful. MX records 
 
 ```bash
 # Basic lookup - get the A record for a domain
-dig google.com
+ahegazy0@kali:~$ dig google.com
 
 # Get a specific record type
-dig google.com MX
-dig google.com NS
-dig google.com TXT
-dig google.com AAAA
+ahegazy0@kali:~$ dig google.com MX
+ahegazy0@kali:~$ dig google.com NS
+ahegazy0@kali:~$ dig google.com TXT
+ahegazy0@kali:~$ dig google.com AAAA
 
 # Short output (just the answer)
-dig google.com +short
+ahegazy0@kali:~$ dig google.com +short
 
 # Query a specific DNS server instead of your default
-dig @8.8.8.8 google.com
+ahegazy0@kali:~$ dig @8.8.8.8 google.com
 
 # Reverse DNS lookup (IP to name)
-dig -x 8.8.8.8
+ahegazy0@kali:~$ dig -x 8.8.8.8
 
 # Trace the full resolution path from root
-dig google.com +trace
+ahegazy0@kali:~$ dig google.com +trace
 ```
 
 `nslookup` is the Windows-friendly alternative, also available on Linux:
 
 ```bash
-nslookup google.com
-nslookup -type=MX google.com
-nslookup -type=NS google.com
+ahegazy0@kali:~$ nslookup google.com
+ahegazy0@kali:~$ nslookup -type=MX google.com
+ahegazy0@kali:~$ nslookup -type=NS google.com
 ```
 
 The `+trace` flag in dig is especially useful for understanding the full chain. It shows every step from the root servers down to the authoritative answer.
@@ -107,7 +114,7 @@ Before your machine ever touches DNS, it checks `/etc/hosts`. This is a local fi
 
 ```bash
 # View your hosts file
-cat /etc/hosts
+ahegazy0@kali:~$ cat /etc/hosts
 
 # Typical contents:
 # 127.0.0.1   localhost
@@ -118,7 +125,7 @@ cat /etc/hosts
 To edit it you need root:
 
 ```bash
-sudo nano /etc/hosts
+ahegazy0@kali:~$ sudo nano /etc/hosts
 ```
 
 Add a line like `127.0.0.1 google.com` and your machine will stop resolving google.com through DNS entirely. It just goes straight to 127.0.0.1 (your own machine) instead.
@@ -135,13 +142,10 @@ The security problem: if a DNS server is misconfigured to allow zone transfers f
 
 ```bash
 # Attempt a zone transfer
-dig axfr @<nameserver> <domain>
-
-# Example
-dig axfr @ns1.example.com example.com
+ahegazy0@kali:~$ dig axfr @ns1.example.com example.com
 
 # With host command
-host -t axfr example.com ns1.example.com
+ahegazy0@kali:~$ host -t axfr example.com ns1.example.com
 ```
 
 If the server is properly configured, you'll get a transfer failed message. If it's misconfigured, you get the entire zone - essentially a full map of the organization's infrastructure handed to you.
@@ -188,21 +192,20 @@ Before any attack on an organization, DNS is one of the first places to look. It
 
 ```bash
 # Find all name servers for a domain
-dig NS target.com
+ahegazy0@kali:~$ dig NS target.com
 
 # Find mail servers (reveals email provider, possible spam filters)
-dig MX target.com
+ahegazy0@kali:~$ dig MX target.com
 
 # TXT records often contain security policies and verification tokens
-dig TXT target.com
+ahegazy0@kali:~$ dig TXT target.com
 
 # Try a zone transfer attempt
-dig axfr @ns1.target.com target.com
+ahegazy0@kali:~$ dig axfr @ns1.target.com target.com
 
 # Brute-force subdomains
-# Tools like dnsenum, fierce, or gobuster in DNS mode handle this
-dnsenum target.com
-fierce --domain target.com
+ahegazy0@kali:~$ dnsenum target.com
+ahegazy0@kali:~$ fierce --domain target.com
 ```
 
 A company's DNS records can tell you what cloud provider they use, what email security they have, what services they run publicly, and sometimes reveal internal infrastructure if zone transfers are open.
@@ -215,22 +218,20 @@ BIND (Berkeley Internet Name Domain) is the most widely used DNS server software
 
 ```bash
 # Install BIND
-sudo apt install bind9
+ahegazy0@kali:~$ sudo apt install bind9
 
-# Main config file
-/etc/bind/named.conf
-
-# Zone files live here
-/etc/bind/zones/
+# Main config files:
+# /etc/bind/named.conf
+# /etc/bind/zones/
 
 # Check config syntax
-sudo named-checkconf
+ahegazy0@kali:~$ sudo named-checkconf
 
-# Restart after changes
-sudo systemctl restart bind9
+# Restart service after changes
+ahegazy0@kali:~$ sudo systemctl restart bind9
 
-# Test your server
-dig @127.0.0.1 yourdomain.local
+# Test your server locally
+ahegazy0@kali:~$ dig @127.0.0.1 yourdomain.local
 ```
 
 Running your own DNS server also gives you a clear view of what attacks look like from the server side - failed zone transfer attempts, unusual query patterns, cache behavior.
@@ -258,36 +259,28 @@ Running your own DNS server also gives you a clear view of what attacks look lik
 
 ---
 
-## Lab
+## Practice
 
 ```bash
-# 1. Look up a domain and see the full answer
-dig google.com
-dig google.com +short
+# 1. Query A and MX records
+ahegazy0@kali:~$ dig google.com +short
+ahegazy0@kali:~$ dig MX gmail.com
 
-# 2. Check MX records for a domain
-dig MX gmail.com
+# 2. Trace the full recursive resolution path
+ahegazy0@kali:~$ dig google.com +trace
 
-# 3. Trace the full DNS resolution path
-dig google.com +trace
-
-# 4. Edit your hosts file to redirect a domain locally
-sudo nano /etc/hosts
-# Add: 127.0.0.1 google.com
-# Save, then try visiting google.com in a browser
-# Remove the line when done
-
-# 5. Attempt a zone transfer (on a test domain or a known vulnerable one)
-dig axfr @ns1.example.com example.com
-# Most will fail - that's expected and correct behavior
+# 3. Test local host resolution override
+ahegazy0@kali:~$ cat /etc/hosts
 ```
 
-**Things to think about:**
+- [ ] Query A, MX, NS, and TXT records for a target domain using `dig`.
+- [ ] Trace the recursive lookup path from root servers down to authoritative servers with `dig +trace`.
+- [ ] Test local name resolution priority by adding a temporary entry in `/etc/hosts` and verifying with `ping`.
+- [ ] Attempt an AXFR zone transfer against a test or authorization-permitted server with `dig axfr @<ns> <domain>`.
+- [ ] Explain how DNSSEC cryptographic signatures protect against recursive resolver cache poisoning attacks.
 
-- Your /etc/hosts file has `127.0.0.1 bank.com`. You visit bank.com and it loads a login page that looks normal. How would you know something is wrong?
-- A zone transfer returns results on an internal corporate DNS server. What kind of information could you learn from that?
-- DNSSEC prevents cache poisoning but most users have no idea whether it's enabled. Who in the chain is responsible for making sure it's actually being validated?
+> 💡 *For deeper practice, I also recommend completing the end-of-chapter exercises in the official **Network Basics for Hackers** book.*
 
 ---
 
-*Next: SMTP and email protocols - how messages travel across the internet, and why email is one of the easiest things to fake.*
+*Up next: Module 09 - SMB (Server Message Block)*
