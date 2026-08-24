@@ -1,6 +1,11 @@
-# Module 9 - Sharing is Risky (SMB)
+# Network Basics for Hackers
+## Module 09 - SMB (Server Message Block)
 
-> *The protocol that powers every shared folder and network drive in Windows - and one of the most exploited things in the history of hacking.*
+---
+
+## Overview
+
+Server Message Block (SMB) provides file sharing, printer access, and inter-process remote procedure calls across Windows and Samba networks. Operating primarily over TCP port 445, SMB has a history of severe security vulnerabilities, including wormable remote code execution exploits like EternalBlue (MS17-010) and MS08-067. This module explores SMB architecture, security versions, enumeration, and hardening techniques.
 
 ---
 
@@ -58,31 +63,28 @@ The lesson isn't just "patch your systems" - though it is that. The lesson is th
 
 ```bash
 # Scan for open SMB ports
-nmap -p 445,139 192.168.1.0/24
+ahegazy0@kali:~$ nmap -p 445,139 192.168.1.0/24
 
 # Detect SMB version and check for known vulnerabilities
-nmap -p 445 --script smb-vuln-ms17-010 192.168.1.1
-nmap -p 445 --script smb-security-mode 192.168.1.1
+ahegazy0@kali:~$ nmap -p 445 --script smb-vuln-ms17-010 192.168.1.1
+ahegazy0@kali:~$ nmap -p 445 --script smb-security-mode 192.168.1.1
 
 # Full SMB enumeration script set
-nmap -p 445 --script smb-enum-shares,smb-enum-users 192.168.1.1
+ahegazy0@kali:~$ nmap -p 445 --script smb-enum-shares,smb-enum-users 192.168.1.1
 
 # Check if SMBv1 is enabled
-nmap -p 445 --script smb-protocols 192.168.1.1
+ahegazy0@kali:~$ nmap -p 445 --script smb-protocols 192.168.1.1
 ```
 
 `smbclient` is the Linux tool for interacting with SMB shares directly:
 
 ```bash
-# List available shares on a target
-smbclient -L //192.168.1.10 -N    # -N means no password (try anonymous)
-smbclient -L //192.168.1.10 -U username
+# List available shares on a target (anonymous try)
+ahegazy0@kali:~$ smbclient -L //192.168.1.10 -N
+ahegazy0@kali:~$ smbclient -L //192.168.1.10 -U username
 
 # Connect to a specific share
-smbclient //192.168.1.10/sharename -U username
-
-# Once connected, it works like a basic FTP client
-# ls, get, put, cd, etc.
+ahegazy0@kali:~$ smbclient //192.168.1.10/sharename -U username
 ```
 
 ---
@@ -95,11 +97,11 @@ In a corporate environment this is a serious problem. Sensitive documents, confi
 
 ```bash
 # Check if a share allows anonymous/guest access
-smbclient -L //192.168.1.10 -N
+ahegazy0@kali:~$ smbclient -L //192.168.1.10 -N
 
 # If it connects without asking for a password, guest access is on
 # Try connecting to specific shares
-smbclient //192.168.1.10/shared -N
+ahegazy0@kali:~$ smbclient //192.168.1.10/shared -N
 ```
 
 This is one of the first things to check during an internal network assessment. You'd be surprised how often it comes up.
@@ -112,27 +114,25 @@ Samba is the Linux implementation of SMB. It lets Linux machines share files wit
 
 ```bash
 # Install Samba
-sudo apt install samba
+ahegazy0@kali:~$ sudo apt install samba
 
-# Main config file
-sudo nano /etc/samba/smb.conf
-
-# A basic share config looks like this:
-[shared]
-   path = /home/user/shared
-   browseable = yes
-   read only = no
-   guest ok = no
-   valid users = @smbgroup
+# Main config file: /etc/samba/smb.conf
+# Basic share definition example:
+# [shared]
+#    path = /home/user/shared
+#    browseable = yes
+#    read only = no
+#    guest ok = no
+#    valid users = @smbgroup
 
 # Restart after changes
-sudo systemctl restart smbd
+ahegazy0@kali:~$ sudo systemctl restart smbd
 
 # Add a Samba user (separate from Linux user accounts)
-sudo smbpasswd -a username
+ahegazy0@kali:~$ sudo smbpasswd -a username
 
 # Check your config for syntax errors
-testparm
+ahegazy0@kali:~$ testparm
 ```
 
 Running Samba yourself and configuring it from scratch gives you a good understanding of where misconfigurations happen. The `smb.conf` file has a lot of options, and the insecure defaults are easy to accidentally leave in.
@@ -145,16 +145,16 @@ Running Samba yourself and configuring it from scratch gives you a good understa
 
 ```bash
 # Full enumeration
-enum4linux -a 192.168.1.10
+ahegazy0@kali:~$ enum4linux -a 192.168.1.10
 
 # Just users
-enum4linux -U 192.168.1.10
+ahegazy0@kali:~$ enum4linux -U 192.168.1.10
 
 # Just shares
-enum4linux -S 192.168.1.10
+ahegazy0@kali:~$ enum4linux -S 192.168.1.10
 
 # Just OS info
-enum4linux -o 192.168.1.10
+ahegazy0@kali:~$ enum4linux -o 192.168.1.10
 ```
 
 On a vulnerable or misconfigured target this can return usernames, group memberships, share names, OS version, domain information - all without any credentials.
@@ -173,7 +173,7 @@ Both MS08-067 and MS17-010 follow the same pattern: critical SMB vuln, slow patc
 
 ## Defense
 
-- **Disable SMBv1** - there's no good reason to have it enabled in 2024. On Windows: `Set-SmbServerConfiguration -EnableSMB1Protocol $false`
+- **Disable SMBv1** - there's no good reason to have it enabled in modern environments.
 - **Patch immediately** - EternalBlue had a patch two months before WannaCry. Machines that were patched weren't affected.
 - **Block port 445 at the perimeter** - SMB should never be reachable from the internet. It's an internal protocol.
 - **Disable guest access** - require authentication on all shares.
@@ -196,33 +196,30 @@ Both MS08-067 and MS17-010 follow the same pattern: critical SMB vuln, slow patc
 
 ---
 
-## Lab
+## Practice
 
 ```bash
-# 1. Scan your local network for SMB
-nmap -p 445,139 192.168.1.0/24
+# 1. Scan your local subnet for open SMB services
+ahegazy0@kali:~$ nmap -p 445,139 192.168.1.0/24
 
-# 2. Check if SMBv1 is running on any hosts
-nmap -p 445 --script smb-protocols <target_IP>
+# 2. Check SMB dialect versions on target
+ahegazy0@kali:~$ nmap -p 445 --script smb-protocols 192.168.1.10
 
-# 3. Try listing shares anonymously
-smbclient -L //<target_IP> -N
+# 3. Test anonymous share access
+ahegazy0@kali:~$ smbclient -L //192.168.1.10 -N
 
-# 4. Set up a basic Samba share on your Linux VM
-sudo apt install samba
-sudo nano /etc/samba/smb.conf
-# Add a [testshare] section pointing to a folder
-sudo systemctl restart smbd
-# Try connecting from another machine or from localhost
-smbclient //127.0.0.1/testshare -U yourusername
+# 4. Enumerate target information with enum4linux
+ahegazy0@kali:~$ enum4linux -a 192.168.1.10
 ```
 
-**Things to think about:**
+- [ ] Scan your local subnet for hosts exposing ports 139 and 445.
+- [ ] Run `nmap --script smb-protocols` to detect whether legacy SMBv1 is enabled on target servers.
+- [ ] Test target shares for anonymous guest access with `smbclient -L //<IP> -N`.
+- [ ] Run `enum4linux` against a Windows or Samba test VM to enumerate shares and usernames.
+- [ ] Explain why SMBv1 vulnerabilities like MS17-010 (EternalBlue) enabled self-propagating worm behavior without user interaction.
 
-- WannaCry had a patch available before it hit. What organizational failures led to hundreds of thousands of machines still being unpatched?
-- Why is SMBv1 still found on networks today if it's known to be dangerous?
-- If SMB should never be exposed to the internet, why do so many port scans find it open on public IPs?
+> 💡 *For deeper practice, I also recommend completing the end-of-chapter exercises in the official **Network Basics for Hackers** book.*
 
 ---
 
-*Next: HTTP and HTTPS - the protocols your browser uses for everything, and where a huge portion of real-world web attacks happen.*
+*Up next: Module 10 - SMTP (Email Protocol)*
