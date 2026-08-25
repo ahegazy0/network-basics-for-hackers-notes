@@ -1,6 +1,11 @@
-# Module 10 - The Mailman's Protocol (SMTP)
+# Network Basics for Hackers
+## Module 10 - SMTP (Email Protocol)
 
-> *Email feels instant and simple. Under the hood it's a chain of servers, handshakes, and trust relationships - most of which were designed before security was a serious concern.*
+---
+
+## Overview
+
+The Simple Mail Transfer Protocol (SMTP) governs how electronic mail is relayed across the internet. Built around mutual trust without built-in sender verification, SMTP architectures rely on DNS extensions (SPF, DKIM, DMARC) to defend against spoofing, while exposed Mail Transfer Agents (MTAs) remain prime targets for user enumeration, open relay exploitation, and memory corruption CVEs.
 
 ---
 
@@ -48,7 +53,7 @@ SMTP is a text-based protocol. You can literally telnet to a mail server and hav
 
 ```bash
 # Connect to a mail server on port 25
-telnet mail.example.com 25
+ahegazy0@kali:~$ telnet mail.example.com 25
 
 # The server responds with a banner - often reveals software and version
 # 220 mail.example.com ESMTP Exim 4.94.2
@@ -87,7 +92,7 @@ Some SMTP servers respond differently depending on whether a username exists or 
 
 ```bash
 # Manual enumeration via telnet
-telnet mail.example.com 25
+ahegazy0@kali:~$ telnet mail.example.com 25
 VRFY john.smith
 # 252 2.0.0 john.smith  <- user probably exists
 # 550 5.1.1 john.smith  <- user doesn't exist
@@ -102,10 +107,10 @@ Nmap has a script that automates this against a wordlist:
 
 ```bash
 # Enumerate users against a mail server
-nmap -p 25 --script smtp-enum-users --script-args smtp-enum-users.methods={VRFY,RCPT,EXPN} <target_IP>
+ahegazy0@kali:~$ nmap -p 25 --script smtp-enum-users --script-args smtp-enum-users.methods={VRFY,RCPT,EXPN} <target_IP>
 
 # With a custom user list
-nmap -p 25 --script smtp-enum-users --script-args userdb=/usr/share/wordlists/names.txt <target_IP>
+ahegazy0@kali:~$ nmap -p 25 --script smtp-enum-users --script-args userdb=/usr/share/wordlists/names.txt <target_IP>
 ```
 
 From an attacker's perspective, a confirmed list of employee email addresses is a prerequisite for targeted phishing. You now know real names, naming conventions (john.smith vs jsmith vs john_smith), and valid addresses to send to.
@@ -120,7 +125,8 @@ An open relay means attackers can send mail that appears to come from your domai
 
 ```bash
 # Test if a server is an open relay
-nmap -p 25 --script smtp-open-relay <target_IP>
+ahegazy0@kali:~$ nmap -p 25 --script smtp-open-relay <target_IP>
+```
 
 # Manual test via telnet
 telnet mail.target.com 25
@@ -148,13 +154,13 @@ Three DNS-based mechanisms were created to address this:
 
 ```bash
 # Check if a domain has SPF configured
-dig TXT example.com | grep spf
+ahegazy0@kali:~$ dig TXT example.com | grep spf
 
 # Check DMARC record
-dig TXT _dmarc.example.com
+ahegazy0@kali:~$ dig TXT _dmarc.example.com
 
-# Check DKIM selector (you need to know the selector name)
-dig TXT selector1._domainkey.example.com
+# Check DKIM selector (if selector name is known)
+ahegazy0@kali:~$ dig TXT selector1._domainkey.example.com
 ```
 
 Missing or misconfigured SPF/DKIM/DMARC means it's trivially easy to send email that appears to come from that domain.
@@ -167,19 +173,19 @@ Before any targeted attack, the mail server gives you information:
 
 ```bash
 # Scan for mail-related ports
-nmap -p 25,465,587,110,143 <target_IP>
+ahegazy0@kali:~$ nmap -p 25,465,587,110,143 <target_IP>
 
 # Grab the banner and check software version
-nmap -p 25 -sV <target_IP>
+ahegazy0@kali:~$ nmap -p 25 -sV <target_IP>
 
 # Run all SMTP-related NSE scripts
-nmap -p 25 --script smtp-* <target_IP>
+ahegazy0@kali:~$ nmap -p 25 --script smtp-* <target_IP>
 
 # Check for common vulnerabilities
-nmap -p 25 --script smtp-vuln-cve2010-4344 <target_IP>
+ahegazy0@kali:~$ nmap -p 25 --script smtp-vuln-cve2010-4344 <target_IP>
 
 # Get MX records to find the mail servers for a domain
-dig MX target.com
+ahegazy0@kali:~$ dig MX target.com
 ```
 
 The software version from the banner maps directly to CVE databases. Exim has had multiple critical remote code execution vulnerabilities. Exchange has had several high-profile ones. Knowing the exact version tells you what's potentially exploitable.
@@ -192,19 +198,18 @@ The software version from the banner maps directly to CVE databases. Exim has ha
 
 ```bash
 # Install Exim on Linux
-sudo apt install exim4
+ahegazy0@kali:~$ sudo apt install exim4
 
 # Configure it
-sudo dpkg-reconfigure exim4-config
+ahegazy0@kali:~$ sudo dpkg-reconfigure exim4-config
 
 # Check version
-exim --version
+ahegazy0@kali:~$ exim --version
 
 # View the mail queue
-mailq
+ahegazy0@kali:~$ mailq
 
-# Main config
-/etc/exim4/exim4.conf
+# Main config: /etc/exim4/exim4.conf
 ```
 
 The **2021 Microsoft Exchange** breaches (ProxyLogon, ProxyShell) were a different level. State-sponsored attackers exploited a chain of vulnerabilities in Exchange Server that allowed unauthenticated remote code execution. Tens of thousands of organizations were compromised before patches were widely applied. The attackers installed web shells that persisted for months.
@@ -229,36 +234,32 @@ Exchange runs web services alongside SMTP, which extended the attack surface sig
 
 ---
 
-## Lab
+## Practice
 
 ```bash
-# 1. Find mail servers for a domain
-dig MX gmail.com
-dig MX protonmail.com
+# 1. Query MX records for external domains
+ahegazy0@kali:~$ dig MX gmail.com
+ahegazy0@kali:~$ dig MX protonmail.com
 
-# 2. Check SPF and DMARC on a domain
-dig TXT gmail.com | grep spf
-dig TXT _dmarc.gmail.com
+# 2. Check SPF and DMARC TXT policies
+ahegazy0@kali:~$ dig TXT gmail.com | grep spf
+ahegazy0@kali:~$ dig TXT _dmarc.gmail.com
 
-# 3. Scan a mail server
-nmap -p 25,587,465 -sV <target_IP>
+# 3. Banner grab an MTA service
+ahegazy0@kali:~$ nmap -p 25,587,465 -sV <target_IP>
 
-# 4. Try a manual SMTP conversation (use your own test server)
-telnet localhost 25
-EHLO test.local
-# Read the capabilities the server advertises
-QUIT
-
-# 5. Test for open relay (on your own test server only)
-nmap -p 25 --script smtp-open-relay 127.0.0.1
+# 4. Test for open relay configuration (on lab machines only)
+ahegazy0@kali:~$ nmap -p 25 --script smtp-open-relay 127.0.0.1
 ```
 
-**Things to think about:**
+- [ ] Query mail exchange (MX) records for a domain and inspect their host priorities.
+- [ ] Inspect SPF and DMARC DNS policies using `dig TXT` to evaluate anti-spoofing coverage.
+- [ ] Connect interactively to a local or test MTA using `telnet localhost 25` and perform a banner inspection.
+- [ ] Test user enumeration commands (`VRFY`, `EXPN`) and explain why disabling them prevents address harvesting.
+- [ ] Explain what an open relay is and why allowing unauthenticated external relaying facilitates spam and phishing abuse.
 
-- An email arrives from `ceo@yourcompany.com` asking you to wire money. The domain has no SPF or DMARC records. What does that tell you about whether the email is real?
-- Why would an attacker want a list of valid email addresses from VRFY enumeration before sending a phishing campaign vs just guessing addresses?
-- Exim is the default MTA on Debian systems. A lot of servers get set up and never touched again. Why does this make mail servers a particularly good target for old CVEs?
+> 💡 *For deeper practice, I also recommend completing the end-of-chapter exercises in the official **Network Basics for Hackers** book.*
 
 ---
 
-*Next: HTTP and HTTPS - the foundation of the web, and where the majority of application-layer attacks actually happen.*
+*Up next: Module 11 - SNMP (Network Management Protocol)*
