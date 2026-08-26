@@ -1,6 +1,11 @@
-# Module 11 - The Network Manager (SNMP)
+# Network Basics for Hackers
+## Module 11 - SNMP (Network Management Protocol)
 
-> *A protocol designed to give admins visibility into every device on a network. Which means it also gives attackers visibility into every device on a network.*
+---
+
+## Overview
+
+The Simple Network Management Protocol (SNMP) is widely deployed across routers, switches, servers, and embedded appliances for remote telemetry and configuration. Because legacy versions (SNMPv1 and SNMPv2c) authenticate queries using unencrypted, default "community strings" (such as `public` and `private`), exposed agents provide attackers with extensive intelligence - including routing tables, usernames, running processes, and installed software.
 
 ---
 
@@ -95,52 +100,52 @@ SNMPv3 adds real authentication and encryption. It's what you should be running.
 ## Scanning and Enumeration
 
 ```bash
-# Scan for SNMP on a network
-nmap -sU -p 161 192.168.1.0/24
+# Scan for SNMP on a network (UDP scan)
+ahegazy0@kali:~$ sudo nmap -sU -p 161 192.168.1.0/24
 
 # Check if SNMP is running and get basic info
-nmap -sU -p 161 --script snmp-info <target_IP>
+ahegazy0@kali:~$ sudo nmap -sU -p 161 --script snmp-info <target_IP>
 
 # Enumerate everything nmap can pull via SNMP
-nmap -sU -p 161 --script snmp-* <target_IP>
+ahegazy0@kali:~$ sudo nmap -sU -p 161 --script snmp-* <target_IP>
 ```
 
 `onesixtyone` is a fast SNMP community string brute-forcer. It's specifically designed for this and is much faster than generic password tools for UDP-based SNMP.
 
 ```bash
 # Try common community strings against a single host
-onesixtyone 192.168.1.1 public
-onesixtyone 192.168.1.1 private
+ahegazy0@kali:~$ onesixtyone 192.168.1.1 public
+ahegazy0@kali:~$ onesixtyone 192.168.1.1 private
 
 # Use a wordlist of community strings
-onesixtyone -c /usr/share/doc/onesixtyone/dict.txt 192.168.1.1
+ahegazy0@kali:~$ onesixtyone -c /usr/share/doc/onesixtyone/dict.txt 192.168.1.1
 
 # Scan a whole subnet with a community string list
-onesixtyone -c community_strings.txt -i targets.txt
+ahegazy0@kali:~$ onesixtyone -c community_strings.txt -i targets.txt
 ```
 
 Once you have a valid community string, `snmpcheck` dumps everything available:
 
 ```bash
 # Full enumeration of a device
-snmpcheck -t 192.168.1.1 -c public
+ahegazy0@kali:~$ snmpcheck -t 192.168.1.1 -c public
 
 # Specific sections
-snmpcheck -t 192.168.1.1 -c public -e users    # user accounts
-snmpcheck -t 192.168.1.1 -c public -e process  # running processes
-snmpcheck -t 192.168.1.1 -c public -e software # installed software
-snmpcheck -t 192.168.1.1 -c public -e network  # network interfaces
+ahegazy0@kali:~$ snmpcheck -t 192.168.1.1 -c public -e users    # user accounts
+ahegazy0@kali:~$ snmpcheck -t 192.168.1.1 -c public -e process  # running processes
+ahegazy0@kali:~$ snmpcheck -t 192.168.1.1 -c public -e software # installed software
+ahegazy0@kali:~$ snmpcheck -t 192.168.1.1 -c public -e network  # network interfaces
 ```
 
 Or use `snmpwalk` to walk the entire MIB tree:
 
 ```bash
 # Walk the full MIB
-snmpwalk -v2c -c public 192.168.1.1
+ahegazy0@kali:~$ snmpwalk -v2c -c public 192.168.1.1
 
 # Walk a specific OID
-snmpwalk -v2c -c public 192.168.1.1 1.3.6.1.2.1.1   # system info
-snmpwalk -v2c -c public 192.168.1.1 1.3.6.1.2.1.25.4 # running processes
+ahegazy0@kali:~$ snmpwalk -v2c -c public 192.168.1.1 1.3.6.1.2.1.1   # system info
+ahegazy0@kali:~$ snmpwalk -v2c -c public 192.168.1.1 1.3.6.1.2.1.25.4 # running processes
 ```
 
 ---
@@ -204,32 +209,31 @@ Authentication failure traps are interesting from a security monitoring perspect
 
 ---
 
-## Lab
+## Practice
 
 ```bash
-# 1. Scan your local network for SNMP
-sudo nmap -sU -p 161 192.168.1.0/24
+# 1. Scan your local network for SNMP agents via UDP
+ahegazy0@kali:~$ sudo nmap -sU -p 161 192.168.1.0/24
 
-# 2. Try the default community string against any hosts that respond
-onesixtyone 192.168.1.1 public
-onesixtyone 192.168.1.1 private
+# 2. Test common community strings against responsive targets
+ahegazy0@kali:~$ onesixtyone 192.168.1.1 public
+ahegazy0@kali:~$ onesixtyone 192.168.1.1 private
 
-# 3. If something responds, pull the full info
-snmpcheck -t 192.168.1.1 -c public
+# 3. Pull full telemetry report with snmpcheck
+ahegazy0@kali:~$ snmpcheck -t 192.168.1.1 -c public
 
-# 4. Walk the system info OID manually
-snmpwalk -v2c -c public 192.168.1.1 1.3.6.1.2.1.1
-
-# 5. Check if any device is running SNMPv1 (cleartext)
-nmap -sU -p 161 --script snmp-info 192.168.1.1
+# 4. Walk the system information MIB subtree
+ahegazy0@kali:~$ snmpwalk -v2c -c public 192.168.1.1 1.3.6.1.2.1.1
 ```
 
-**Things to think about:**
+- [ ] Scan your lab network for UDP port 161 using `sudo nmap -sU -p 161`.
+- [ ] Fast-brute community strings with `onesixtyone <target> public private`.
+- [ ] Walk the MIB tree of a responsive target using `snmpwalk -v2c -c public <target>` and examine device description OIDs.
+- [ ] Use `snmpcheck` to extract running processes and network interfaces from a test agent.
+- [ ] Explain why SNMPv1/v2c cleartext community strings expose sensitive network telemetry to passive sniffing.
 
-- If SNMP runs on UDP and has no connection setup, how does that affect detection compared to TCP-based protocols?
-- You find a server with SNMP running and `public` works. The installed software list shows an unpatched version of OpenSSH. What's your next step?
-- Why do admins leave default community strings unchanged? What organizational failure does that represent?
+> 💡 *For deeper practice, I also recommend completing the end-of-chapter exercises in the official **Network Basics for Hackers** book.*
 
 ---
 
-*Next: databases over the network - how SQL servers get exposed, and why finding an open database port is often the end of the engagement.*
+*Up next: Module 12 - HTTP & HTTPS (The Web's Language)*
