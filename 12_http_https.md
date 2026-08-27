@@ -1,6 +1,11 @@
-# Module 12 - The Web's Language (HTTP/HTTPS)
+# Network Basics for Hackers
+## Module 12 - HTTP & HTTPS (The Web's Language)
 
-> *Every website you've ever used runs on this. Understanding it properly changes how you see the web entirely.*
+---
+
+## Overview
+
+HyperText Transfer Protocol (HTTP) and its TLS-encrypted counterpart (HTTPS) form the application-layer foundation of the World Wide Web. Operating over TCP ports 80 and 443, HTTP is stateless, using cookies and headers to track identity. Understanding raw request/response structures, status codes, and proxy interception with tools like Burp Suite is essential for evaluating web application security.
 
 ---
 
@@ -135,6 +140,8 @@ HTTPS protects data in transit. It does not protect against weak passwords, SQL 
 
 Burp Suite is the standard tool for web application testing. It sits between your browser and the target server as a proxy - every request goes through Burp before it reaches the server, and every response goes through Burp before your browser sees it.
 
+![Burp Suite Proxy Interception Architecture](assets/burp_proxy_interception_diagram_1789285531274.jpg)
+
 ```
 [Your Browser] --> [Burp Suite Proxy] --> [Web Server]
                          |
@@ -260,36 +267,27 @@ Missing security headers are findings in themselves during a web assessment. A s
 
 ---
 
-## Lab
+## Practice
 
 ```bash
-# 1. Set up Burp Suite as a browser proxy
-# Start Burp > Proxy > Options > confirm 127.0.0.1:8080
-# Configure browser proxy settings to match
-# Install Burp CA cert for HTTPS
+# 1. Inspect HTTP response headers on a target site
+ahegazy0@kali:~$ curl -I https://example.com
 
-# 2. Visit any HTTP site with Intercept on
-# Read the raw request - find the User-Agent, Host, Cookie headers
+# 2. Check for security headers (HSTS, CSP, X-Frame-Options)
+ahegazy0@kali:~$ curl -sI https://example.com | grep -iE 'strict-transport-security|content-security-policy|x-frame-options'
 
-# 3. Submit a login form on a test site (DVWA, HackTheBox, etc.)
-# Capture the POST request in Burp
-# Can you see the password in plaintext in the request body?
-
-# 4. Send the captured request to Repeater
-# Modify a parameter value and resend
-# Compare the responses
-
-# 5. Check security headers on a real site
-curl -I https://example.com
-# Look for: Strict-Transport-Security, Content-Security-Policy, X-Frame-Options
+# 3. Launch Burp Suite proxy
+ahegazy0@kali:~$ burpsuite &
 ```
 
-**Things to think about:**
+- [ ] Configure your browser proxy to route through Burp Suite on `127.0.0.1:8080`.
+- [ ] Install the Burp Suite CA certificate in your browser trust store to intercept HTTPS traffic.
+- [ ] Intercept a live form submission, identify parameter positions, and observe raw cookies.
+- [ ] Send an intercepted request to Burp Repeater, tamper with a parameter, and inspect status codes.
+- [ ] Use `curl -I` to audit critical security headers (HSTS, CSP, X-Frame-Options) on a target web application.
 
-- A login form uses GET instead of POST. Where does the password end up, and why is that a problem?
-- You capture a session cookie without HttpOnly set. What attack does that enable, and how would you execute it?
-- HTTPS is enabled on a site. A parameter in a POST request is being passed directly to a SQL query. Does HTTPS protect against this? Why or why not?
+> 💡 *For deeper practice, I also recommend completing the end-of-chapter exercises in the official **Network Basics for Hackers** book.*
 
 ---
 
-*Next: more network protocols, deeper into the stack - where lower-level attacks and advanced exploitation techniques live.*
+*Up next: Module 13 - Automobile Networks (CAN Bus)*
