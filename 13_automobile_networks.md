@@ -1,6 +1,11 @@
-# Module 13 - Ghost in the Machine (Automobile Networks)
+# Network Basics for Hackers
+## Module 13 - Automobile Networks (CAN Bus)
 
-> *Modern cars run dozens of computers talking to each other constantly. None of them were designed with security in mind.*
+---
+
+## Overview
+
+Modern vehicles operate as complex internal distributed networks connecting dozens of Electronic Control Units (ECUs) over the Controller Area Network (CAN) bus. Originally engineered in the 1980s for reliability and real-time performance, CAN lacks message authentication, source addressing, and encryption. This module explores vehicle bus architecture, OBD-II interfaces, packet sniffing with `can-utils`, and safe simulation via ICSim.
 
 ---
 
@@ -17,6 +22,8 @@ The protocol they use to do this is **CAN - Controller Area Network**. Developed
 ## How CAN Works
 
 CAN is a two-wire bus. Every ECU connects to the same two wires - CAN High and CAN Low. When any ECU wants to send a message, it broadcasts to the entire bus. Every other ECU on the bus receives every message. Each ECU decides for itself whether the message is relevant to it.
+
+![Automobile CAN Bus and ECU Architecture](assets/can_bus_vehicle_diagram_1789285560542.jpg)
 
 ```
 [Engine ECU] ----+
@@ -49,17 +56,16 @@ Every car sold in the US since 1996 has an OBD-II (On-Board Diagnostics) port, u
 It also connects directly to the CAN bus.
 
 ```bash
-# Plug a CAN adapter into OBD-II port
-# Common adapters: USB2CAN, CANtact, ELM327 (limited)
+# Plug a CAN adapter into OBD-II port (e.g. USB2CAN, CANtact)
 
 # Check if Linux sees the CAN interface
-ip link show
+ahegazy0@kali:~$ ip link show
 
-# Bring up the CAN interface
-sudo ip link set can0 up type can bitrate 500000
+# Bring up the CAN interface at standard automotive bitrate
+ahegazy0@kali:~$ sudo ip link set can0 up type can bitrate 500000
 
-# Verify it's up
-ip link show can0
+# Verify interface state
+ahegazy0@kali:~$ ip link show can0
 ```
 
 Physical access to the OBD-II port means direct access to the CAN bus. No authentication required.
@@ -71,28 +77,26 @@ Physical access to the OBD-II port means direct access to the CAN bus. No authen
 `can-utils` is a collection of Linux command-line tools for working with CAN interfaces.
 
 ```bash
-# Install
-sudo apt install can-utils
+# Install can-utils
+ahegazy0@kali:~$ sudo apt install can-utils
 
 # Dump all CAN traffic in real-time
-candump can0
+ahegazy0@kali:~$ candump can0
 
 # Dump to a file for later analysis
-candump -l can0
-# Creates a log file like: candump-2024-01-15_143022.log
+ahegazy0@kali:~$ candump -l can0
 
 # Replay a recorded log file
-canplayer -I candump-2024-01-15_143022.log
+ahegazy0@kali:~$ canplayer -I candump-2024-01-15_143022.log
 
-# Send a single CAN frame manually
-# cansend <interface> <ID>#<data>
-cansend can0 0CF#000000000000FF00
+# Send a single CAN frame manually: cansend <interface> <ID>#<data>
+ahegazy0@kali:~$ cansend can0 0CF#000000000000FF00
 
-# Live monitor with change highlighting (easier to spot active signals)
-cansniffer can0
+# Live monitor with change highlighting (isolate active signals)
+ahegazy0@kali:~$ cansniffer can0
 
-# Statistics about bus traffic
-canbusload can0@500000
+# Statistics about bus traffic load
+ahegazy0@kali:~$ canbusload can0@500000
 ```
 
 `cansniffer` is particularly useful during analysis. It highlights bytes that are changing in real-time, which makes it much easier to isolate which CAN IDs respond to physical actions like pressing buttons or turning the steering wheel.
@@ -105,23 +109,22 @@ Before touching a real vehicle, use **ICSim** (Instrument Cluster Simulator). It
 
 ```bash
 # Install ICSim
-git clone https://github.com/zombieCraig/ICSim
-cd ICSim
-make
+ahegazy0@kali:~$ git clone https://github.com/zombieCraig/ICSim
+ahegazy0@kali:~$ cd ICSim && make
 
-# Start the virtual CAN interface
-sudo modprobe vcan
-sudo ip link add dev vcan0 type vcan
-sudo ip link set up vcan0
+# Start the virtual CAN kernel module and interface
+ahegazy0@kali:~$ sudo modprobe vcan
+ahegazy0@kali:~$ sudo ip link add dev vcan0 type vcan
+ahegazy0@kali:~$ sudo ip link set up vcan0
 
-# Run the simulator
-./icsim vcan0
+# Run the virtual cluster dashboard
+ahegazy0@kali:~$ ./icsim vcan0
 
-# In another terminal, run the controls
-./controls vcan0
+# In a second terminal, launch the controller interface
+ahegazy0@kali:~$ ./controls vcan0
 
-# Now you can dump traffic from the simulator
-candump vcan0
+# In a third terminal, dump simulator bus traffic
+ahegazy0@kali:~$ candump vcan0
 ```
 
 The workflow for learning CAN analysis:
@@ -150,13 +153,13 @@ On the CAN bus itself, replay attacks work by recording the frames associated wi
 
 ```bash
 # Record all traffic while triggering an action
-candump -l vcan0
+ahegazy0@kali:~$ candump -l vcan0
 
 # Replay the recorded traffic
-canplayer -I logfile.log vcan0
+ahegazy0@kali:~$ canplayer -I logfile.log vcan0
 
 # Or send a specific frame repeatedly
-while true; do cansend vcan0 19B#000000000000; sleep 0.1; done
+ahegazy0@kali:~$ while true; do cansend vcan0 19B#000000000000; sleep 0.1; done
 ```
 
 In ICSim this is how you practice - find the ID for an action, replay it, confirm it works. On a real vehicle this is where things get dangerous, which is why the simulator exists.
@@ -207,40 +210,30 @@ The result is that the physical network inside a vehicle is one of the least sec
 
 ---
 
-## Lab (ICSim Only)
+## Practice
 
 ```bash
 # 1. Set up the virtual CAN interface
-sudo modprobe vcan
-sudo ip link add dev vcan0 type vcan
-sudo ip link set up vcan0
+ahegazy0@kali:~$ sudo modprobe vcan
+ahegazy0@kali:~$ sudo ip link add dev vcan0 type vcan
+ahegazy0@kali:~$ sudo ip link set up vcan0
 
-# 2. Start ICSim in one terminal
-./icsim vcan0
+# 2. Launch ICSim dashboard and controller
+ahegazy0@kali:~$ ./icsim vcan0 &
+ahegazy0@kali:~$ ./controls vcan0 &
 
-# 3. Start the controls in another terminal
-./controls vcan0
-
-# 4. Start capturing in a third terminal
-candump vcan0 | tee can_capture.log
-
-# 5. Use the controls - press lock/unlock, use turn signals
-# Watch which CAN IDs appear or change in the dump
-
-# 6. Try cansniffer to see changes more clearly
-cansniffer vcan0
-
-# 7. Once you identify a CAN ID for an action, try sending it
-cansend vcan0 <ID>#<data>
-# Does the simulator respond?
+# 3. Monitor CAN packets with change highlighting
+ahegazy0@kali:~$ cansniffer vcan0
 ```
 
-**Things to think about:**
+- [ ] Load the `vcan` kernel module and create a virtual CAN interface (`vcan0`).
+- [ ] Install and launch the ICSim instrument cluster simulator and controls.
+- [ ] Sniff active bus traffic with `candump` and identify frame ID changes during vehicle control inputs.
+- [ ] Use `cansniffer` with byte delta highlighting to isolate the specific arbitration ID for door unlock actions.
+- [ ] Craft and inject a raw frame using `cansend vcan0 <ID>#<DATA>` and verify the instrument cluster reacts.
 
-- CAN has no source addresses. Why does that make authentication impossible without redesigning the protocol?
-- A car's infotainment system gets a software update via cellular. What's the worst-case attack scenario if that update mechanism isn't secured properly?
-- Rolling codes on key fobs prevent basic replay attacks. What would an attacker need to do to defeat rolling codes?
+> 💡 *For deeper practice, I also recommend completing the end-of-chapter exercises in the official **Network Basics for Hackers** book.*
 
 ---
 
-*Next: SCADA and industrial control systems - the same design philosophy as CAN but running power grids, water treatment plants, and factories.*
+*Up next: Module 14 - SCADA & Industrial Control Systems*
