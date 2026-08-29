@@ -1,6 +1,11 @@
-# Module 14 - The Industrial Target (SCADA/ICS)
+# Network Basics for Hackers
+## Module 14 - SCADA & Industrial Control Systems
 
-> *The same "no security by design" philosophy as CAN bus, but running power grids, water plants, and factories instead of a single car.*
+---
+
+## Overview
+
+Supervisory Control and Data Acquisition (SCADA) and Industrial Control Systems (ICS) monitor and automate critical physical infrastructure - power grids, water treatment facilities, chemical plants, and manufacturing lines. Because protocols like Modbus/TCP lack authentication, origin validation, and encryption, securing industrial environments relies heavily on network segmentation models (such as the Purdue Enterprise Reference Architecture) and air-gap hygiene.
 
 ---
 
@@ -106,18 +111,17 @@ These tools exist for authorized security assessments and research in lab enviro
 
 ```bash
 # Nmap - scan for Modbus services
-nmap -p 502 --script modbus-discover <target>
+ahegazy0@kali:~$ nmap -p 502 --script modbus-discover <target>
 
 # Show device information from a Modbus device
-nmap -p 502 --script modbus-discover --script-args='modbus-discover.aggressive=true' <target>
+ahegazy0@kali:~$ nmap -p 502 --script modbus-discover --script-args='modbus-discover.aggressive=true' <target>
 ```
 
 For hands-on learning, simulators exist specifically so you can practice without touching real systems:
 
 ```bash
 # modbus-server - run a software Modbus slave for testing
-pip install pymodbus
-# Use pymodbus to create a test server locally
+ahegazy0@kali:~$ pip install pymodbus
 
 # Or use dedicated ICS simulation environments:
 # - GNS3 with ICS device images
@@ -132,6 +136,8 @@ All ICS security labs and certifications use simulated environments. Working on 
 ## Defense and the Air Gap
 
 The primary defense recommendation hasn't changed: **separate OT networks from IT networks and from the internet**.
+
+![SCADA Purdue Model and Network Segmentation](assets/scada_purdue_model_diagram_1789285574055.jpg)
 
 ```
 [Internet]
@@ -183,39 +189,24 @@ Beyond network segmentation:
 
 ---
 
-## Lab (Simulation Only)
+## Practice
 
 ```bash
-# 1. Set up a local Modbus test server with pymodbus
-pip install pymodbus
-python3 -c "
-from pymodbus.server.sync import StartTcpServer
-from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
-from pymodbus.datastore import ModbusSequentialDataBlock
-store = ModbusSlaveContext(
-    co=ModbusSequentialDataBlock(0, [0]*100),
-    hr=ModbusSequentialDataBlock(0, [0]*100))
-context = ModbusServerContext(slaves=store, single=True)
-StartTcpServer(context, address=('localhost', 502))
-"
+# 1. Install simulation libraries in lab environment
+ahegazy0@kali:~$ pip install pymodbus
 
-# 2. In another terminal, scan it
-nmap -p 502 --script modbus-discover localhost
-
-# 3. Read coil values from your test server
-# Use pymodbus client to read and write to your own server
-
-# Research task: look up ICS-CERT advisories at cisa.gov/ics
-# Find three recent advisories for industrial control systems
-# What vulnerabilities keep appearing?
+# 2. Probe for local Modbus TCP listener
+ahegazy0@kali:~$ nmap -p 502 --script modbus-discover localhost
 ```
 
-**Things to think about:**
+- [ ] Study the Purdue Enterprise Reference Architecture and identify boundary controls between Level 2/3 (Control/Operations) and Level 4/5 (Enterprise/IT).
+- [ ] Install `pymodbus` to simulate a local virtual PLC slave controller.
+- [ ] Scan the local test server with `nmap -p 502 --script modbus-discover` to extract device parameters.
+- [ ] Review published ICS-CERT advisories on CISA's catalog and identify recurring vulnerabilities across industrial automation vendors.
+- [ ] Contrast IT vs OT priorities (Confidentiality vs Availability/Safety): Why are regular automated software patches and vulnerability scans often prohibited on live industrial lines?
 
-- Stuxnet caused physical destruction while reporting normal readings to operators. What does that tell you about the limits of trusting readings from a compromised control system?
-- An industrial facility says their OT network is air-gapped. You find a Windows workstation that engineers use for both email and PLC programming. Is it really air-gapped?
-- Why is patching so much harder in OT environments than in regular IT environments?
+> 💡 *For deeper practice, I also recommend completing the end-of-chapter exercises in the official **Network Basics for Hackers** book.*
 
 ---
 
-*Next: radio frequency - how wireless signals work beyond Wi-Fi and Bluetooth, and the broader spectrum of wireless attack surfaces.*
+*Up next: Module 15 - RF & Software Defined Radio*
