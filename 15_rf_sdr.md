@@ -1,6 +1,11 @@
-# Module 15 - Signals from the Sky (RF and SDR)
+# Network Basics for Hackers
+## Module 15 - RF & Software Defined Radio
 
-> *Everything wireless is just radio waves. With the right hardware and software, you can see the invisible.*
+---
+
+## Overview
+
+Software Defined Radio (SDR) shifts radio frequency signal processing from dedicated hardware circuits to computational software. Using low-cost hardware like the RTL-SDR or HackRF, security practitioners can capture, demodulate, and analyze wireless protocols across the radio spectrum - ranging from broadcast aircraft transponders (ADS-B) and marine tracking (AIS) to ISM-band telemetry and unencrypted hospital pagers.
 
 ---
 
@@ -38,16 +43,16 @@ For learning, start with RTL-SDR. You can do a surprising amount with receive-on
 
 ```bash
 # Install core SDR tools on Linux
-sudo apt install rtl-sdr gqrx-sdr
+ahegazy0@kali:~$ sudo apt install rtl-sdr gqrx-sdr
 
 # Test your RTL-SDR dongle
-rtl_test
+ahegazy0@kali:~$ rtl_test
 
 # Check what SDR devices are connected
-rtl_eeprom
+ahegazy0@kali:~$ rtl_eeprom
 
 # Command-line FM radio receiver
-rtl_fm -f 100.1M -M wbfm -s 200000 -r 48000 - | aplay -r 48000 -f S16_LE
+ahegazy0@kali:~$ rtl_fm -f 100.1M -M wbfm -s 200000 -r 48000 - | aplay -r 48000 -f S16_LE
 ```
 
 **GQRX** is the main GUI for general SDR exploration on Linux. It shows a live waterfall display - frequency on the horizontal axis, time going downward, signal strength shown as color. You can see every signal in your range at once.
@@ -85,18 +90,14 @@ ADS-B (Automatic Dependent Surveillance-Broadcast) is the system modern aircraft
 
 ```bash
 # Install dump1090
-sudo apt install dump1090-mutability
+ahegazy0@kali:~$ sudo apt install dump1090-mutability
 
 # Or build from source
-git clone https://github.com/antirez/dump1090
-cd dump1090
-make
+ahegazy0@kali:~$ git clone https://github.com/antirez/dump1090
+ahegazy0@kali:~$ cd dump1090 && make
 
 # Start receiving (RTL-SDR plugged in)
-./dump1090 --interactive --net
-
-# Open browser to see aircraft on a map
-# http://localhost:8080
+ahegazy0@kali:~$ ./dump1090 --interactive --net
 ```
 
 In a populated area you'll typically see dozens of aircraft at any time. Each one is broadcasting:
@@ -117,29 +118,28 @@ With an RTL-SDR you can receive a lot:
 
 **ACARS** - text messages between aircraft and ground stations. Flight plans, weather, maintenance messages.
 ```bash
-acarsdec -r 0 131.550
+ahegazy0@kali:~$ acarsdec -r 0 131.550
 ```
 
 **AIS** - ship tracking. Same concept as ADS-B but for marine vessels on 161.975 MHz and 162.025 MHz.
 ```bash
-rtl_fm -f 161.975M | aisdecoder
+ahegazy0@kali:~$ rtl_fm -f 161.975M | aisdecoder
 ```
 
 **NOAA Weather Satellites** - the NOAA polar-orbiting weather satellites transmit images on 137 MHz. You can receive actual satellite images of cloud cover.
 ```bash
 # Receive and decode NOAA APT weather images
-rtl_fm -f 137.620M -s 60000 | sox -t raw -r 60000 -e signed -b 16 -c 1 - output.wav
-# Then decode the audio file with noaa-apt or WXtoImg
+ahegazy0@kali:~$ rtl_fm -f 137.620M -s 60000 | sox -t raw -r 60000 -e signed -b 16 -c 1 - output.wav
 ```
 
 **Pagers** - still used widely in hospitals and industrial facilities. Transmit on frequencies around 152-170 MHz and 929-932 MHz. Completely unencrypted.
 ```bash
-multimon-ng -t raw -a POCSAG512 -a POCSAG1200 -a FLEX <(rtl_fm -f 152.240M -s 22050 -)
+ahegazy0@kali:~$ multimon-ng -t raw -a POCSAG512 -a POCSAG1200 -a FLEX <(rtl_fm -f 152.240M -s 22050 -)
 ```
 
 **TPMS** - tire pressure sensors on cars broadcasting their readings.
 ```bash
-rtl_433 -f 315M
+ahegazy0@kali:~$ rtl_433 -f 315M
 ```
 
 `rtl_433` is a general-purpose decoder for the 433 MHz ISM band where a huge number of IoT sensors, weather stations, and consumer devices transmit.
@@ -209,37 +209,30 @@ Transmitting GPS spoof signals without authorization is illegal in virtually eve
 
 ---
 
-## Lab
+## Practice
 
 ```bash
-# 1. Plug in RTL-SDR dongle and test it
-rtl_test -t
+# 1. Test connected RTL-SDR receiver hardware
+ahegazy0@kali:~$ rtl_test -t
 
-# 2. Open GQRX
-gqrx
-# Tune to a local FM station (88-108 MHz)
-# Switch to WFM (wide FM) demodulation
-# You should hear audio
+# 2. Launch GQRX waterfall interface
+ahegazy0@kali:~$ gqrx &
 
-# 3. Track aircraft
-dump1090 --interactive --net
-# Open http://localhost:8080 in your browser
-# How many aircraft can you see? What altitudes and speeds?
+# 3. Decode broadcast aircraft ADS-B signals
+ahegazy0@kali:~$ dump1090 --interactive --net
 
-# 4. Decode general 433 MHz devices
-rtl_433
-# Leave it running - you'll likely see weather sensors, car remotes, other devices
-
-# 5. If near a coast or major river, try AIS ship tracking
-rtl_fm -f 161.975M -s 48000 | multimon-ng -t raw -a AIS -
+# 4. Sniff 433 MHz ISM band telemetry
+ahegazy0@kali:~$ rtl_433
 ```
 
-**Things to think about:**
+- [ ] Test RTL-SDR dongle connectivity and tuner clock stability using `rtl_test -t`.
+- [ ] Inspect local spectrum activity across FM or ISM bands using the GQRX waterfall spectrum view.
+- [ ] Capture and decode live 1090 MHz aircraft position reports using `dump1090`.
+- [ ] Sniff unencrypted sensor packets on 433.92 MHz with `rtl_433`.
+- [ ] Explain the critical legal and physical boundaries distinguishing passive reception from unauthorized RF transmission and GPS spoofing.
 
-- ADS-B has no authentication. An aircraft just broadcasts its own position. What attack does that enable against air traffic management systems that trust ADS-B data?
-- GPS has been used as a timestamp source for financial trading systems. If GPS position can be spoofed, what else can be spoofed along with it?
-- Pager traffic in hospitals is often unencrypted. What kind of information flows over hospital paging systems, and what are the privacy implications?
+> 💡 *For deeper practice, I also recommend completing the end-of-chapter exercises in the official **Network Basics for Hackers** book.*
 
 ---
 
-*That's the last module. From TCP/IP fundamentals all the way to the radio frequency spectrum - you now have a solid map of the attack surface that runs the modern world.*
+*Congratulations! You've traversed network fundamentals from low-level Ethernet and wireless airwaves up to industrial SCADA systems and software defined radio.*
