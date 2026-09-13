@@ -1,7 +1,5 @@
 # Course Introduction - Network Basics for Hackers
 
-> *A practical study guide to core network protocols, traffic analysis, and attack surfaces.*
-
 ---
 
 ## Overview
